@@ -65,9 +65,10 @@ def run_claude(
     Returns:
         Parsed JSON dict with keys: result, session_id, num_turns, is_error, etc.
     """
+    # -p takes the prompt as its direct argument: claude -p "text" [flags...]
     cmd = [
         "claude",
-        "--print",                    # non-interactive / headless mode
+        "-p", prompt,
         "--output-format", "json",    # machine-readable structured output
         "--max-turns", str(max_turns),
     ]
@@ -80,8 +81,6 @@ def run_claude(
 
     if allowed_tools:
         cmd += ["--allowedTools", ",".join(allowed_tools)]
-
-    cmd.append(prompt)
 
     try:
         result = subprocess.run(
