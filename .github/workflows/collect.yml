@@ -1,0 +1,57 @@
+name: collect
+
+on:
+  schedule:
+    # Hourly. GitHub's cron fires late under load (5-30 minutes is normal), which
+    # is harmless here: since_time watermarks make every run self-healing.
+    - cron: "7 * * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Print the queries without spending anything"
+        type: boolean
+        default: false
+
+concurrency:
+  # Two overlapping runs would poll the same watermark twice and pay twice.
+  group: xcollect-collect
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install
+        run: pip install -r requirements.txt libsql
+
+      - name: Collect
+        env:
+          # Only the provider named in config.yaml needs its key set.
+          TWITTERAPI_IO_KEY: ${{ secrets.TWITTERAPI_IO_KEY }}
+          TWITTERAPIS_COM_KEY: ${{ secrets.TWITTERAPIS_COM_KEY }}
+          # Durable state. Without these the runner's SQLite file is discarded
+          # when the job ends, every run looks like a cold start, and the cost
+          # model collapses.
+          LIBSQL_URL: ${{ secrets.LIBSQL_URL }}
+          LIBSQL_AUTH_TOKEN: ${{ secrets.LIBSQL_AUTH_TOKEN }}
+        run: |
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            python -m xcollect run --dry-run
+          else
+            python -m xcollect run
+          fi
+
+      - name: Spend so far this month
+        if: always()
+        env:
+          LIBSQL_URL: ${{ secrets.LIBSQL_URL }}
+          LIBSQL_AUTH_TOKEN: ${{ secrets.LIBSQL_AUTH_TOKEN }}
+        run: python -m xcollect status --runs 5 >> "$GITHUB_STEP_SUMMARY"

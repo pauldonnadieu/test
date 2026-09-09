@@ -1,0 +1,52 @@
+# xcollect configuration.
+#
+# Cost lives in this file more than in the code. The three levers, in order of
+# impact: topic cadence_hours, topic min_faves, and accounts cadence_hours.
+
+provider: twitterapi_io   # or twitterapis_com
+
+budget:
+  # Hard ceiling. The collector stops rather than crossing it.
+  # $3.00 USD is roughly $4.50 AUD.
+  monthly_usd_ceiling: 3.00
+  # Pagination guard. With since_time watermarks, a normal hourly run needs
+  # exactly one page; more than this means something is wrong with the window.
+  max_pages_per_query: 3
+
+collection:
+  overlap_seconds: 300      # re-ask for 5 minutes to cover the seam between runs
+  cold_start_hours: 6       # how far back to reach on a source's first ever run
+  max_lookback_hours: 48    # cap catch-up after an outage, so it stays affordable
+  handles_per_batch: 20
+  max_query_chars: 480      # X caps search queries at ~512
+
+accounts:
+  cadence_hours: 1
+  backoff_max_level: 2      # a silent account drops to 4-hourly, not never
+  exclude_replies: true
+  exclude_retweets: true
+  lang: null                # null keeps every language
+  handles:
+    - nasa
+    - esa
+    - CERN
+
+topics:
+  # min_faves is the difference between a handful of posts an hour and a
+  # firehose. It is applied by X before the provider bills us.
+  - name: ai-research
+    cadence_hours: 2        # popular posts need time to accumulate likes anyway
+    min_faves: 500
+    lang: en
+    keywords:
+      - "large language model"
+      - "AI safety"
+      - LLM
+
+  - name: spaceflight
+    cadence_hours: 2
+    min_faves: 1000
+    lang: en
+    keywords:
+      - "rocket launch"
+      - starship
