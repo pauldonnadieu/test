@@ -4,6 +4,8 @@ A personal AI operating system: coach, mentor, strategic partner and executive a
 
 These documents are the briefing pack. Hand them to Claude Code to build the system from scratch, then to build what comes after it.
 
+They are written as goals and definitions of done rather than as instructions. Claude Code owns the how. What it does not own is a short list of invariants in `ARCHITECTURE.md` Section 3.1, which exist because each one turns a category of failure from catastrophic into survivable. Everything else is a decision reached so far, with the reasoning shown, and open to a better argument.
+
 ## What is here
 
 **Read these to build it.**
@@ -11,7 +13,7 @@ These documents are the briefing pack. Hand them to Claude Code to build the sys
 | File | Purpose |
 |---|---|
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | The shape and the reasoning. Decisions, threat model, network, filesystem, interfaces. Start here. |
-| [docs/BUILD.md](docs/BUILD.md) | The build itself. Stages 0 to 8, acceptance gates, stop points. |
+| [docs/BUILD.md](docs/BUILD.md) | The build itself. Eight goals in order, each with a definition of done. |
 | [docs/EXTENSIONS.md](docs/EXTENSIONS.md) | What to build after the core works: the companion app, connections, device automation, extra backup layers. |
 
 **Drafts, not deployables.**
@@ -32,6 +34,8 @@ These documents are the briefing pack. Hand them to Claude Code to build the sys
 1. `docs/ARCHITECTURE.md` for the shape and why it is that shape.
 2. `docs/BUILD.md`, working the stages in order. Do not skip a stage's acceptance test.
 3. `docs/EXTENSIONS.md` only once the core has run for a month in real daily use.
+
+If a decision in these documents looks wrong once you are building against reality, say so. They were written without knowing what the build would turn up.
 
 ## The shape, in brief
 

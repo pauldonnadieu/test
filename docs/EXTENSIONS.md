@@ -2,7 +2,9 @@
 
 What to build after the AIOS core works, and how. Nothing here is part of v1. Everything here is guidance for Claude Code when the user says "now build X".
 
-**The rule that governs this whole document:** nothing in here gets built until the core has run for a month with real daily use. Not because of process discipline for its own sake, but because a month of check-ins and time logs tells you which of these is actually worth building, and guessing before that produces features nobody uses.
+**One piece of advice governs this whole document:** nothing here is worth starting until the core has run for a month with real daily use. Not process discipline for its own sake. A month of check-ins and time logs tells you which of these is actually worth building, and guessing before that produces features nobody opens.
+
+As with `BUILD.md`, what follows is goals and constraints. Where it describes an approach, that is a starting point and a better one is better.
 
 ---
 
@@ -100,17 +102,27 @@ The alternatives, and why not: **native Swift and SwiftUI** gives the best timer
 
 **Prerequisites to flag before starting:** an Apple Developer account at roughly 99 USD per year is needed for TestFlight or for device installs that last longer than seven days. Android side-loading is free. Tailscale must be installed and set to always-on on any device running the app.
 
-### 1.8 Acceptance
+### 1.8 Done when
 
-Phase 1 is done when a week of time blocks and energy observations captured entirely through the app appears in the weekly review and produces a finding the user had not noticed. Not when the screens look right.
+**Phase 1** is done when a week of time blocks and energy observations, captured entirely through the app, appears in the weekly review and produces a finding the user had not noticed. Not when the screens look right.
 
-Every phase: a lost-phone test. Revoke the device token and confirm the app can no longer read or write anything.
+**Phase 2** is done when a pomodoro survives the phone being locked, the app being backgrounded, and the network dropping mid-block.
+
+**Phase 3** is done when the user has run a week without opening `tasks/active.md` in any other way.
+
+**Phase 4** is done when it shows the user something they disagree with, and the underlying data settles the argument.
+
+**Every phase** ends with a lost-phone test: revoke the device token, confirm the app can no longer read or write anything, and confirm the AIOS still works.
 
 ---
 
 ## 2. Adding a connection
 
 The AIOS reaching calendar, email, a task service or anything else. One at a time, each fully settled before the next.
+
+**Goal.** The AIOS can use the connection for something specific and valuable, and a compromise of it reaches nothing beyond its own scope.
+
+**Done when.** A data-flow record exists in `connections.md`; the credential is scoped to this one purpose and independently revocable; everything retrieved lands in `raw/untrusted/` with provenance; and the capability is at autonomy level 0 or 1.
 
 **Before connecting anything, answer these in writing** and put the result in `connections.md`:
 
