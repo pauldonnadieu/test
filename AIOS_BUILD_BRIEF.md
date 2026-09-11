@@ -77,7 +77,7 @@ Do not re-litigate these. They are the baseline. If you think one is wrong, say 
 | D14 | The rebuild package may optionally live in a private GitHub repo. It contains no secrets and no personal data, so this is safe. Google Drive alone is acceptable. |
 | D15 | No database in v1. Files and SQLite only if something genuinely needs it. |
 | D16 | Claude Code is the AIOS runtime. No framework, no orchestrator, no n8n, no queue. |
-| D17 | Mobile interface is a Tailscale-only PWA over a local HTTP API. See Section 9. |
+| D17 | Mobile interface is Claude Code Remote Control, run from inside the container. No self-built app or listening service in v1. See Section 9. |
 | D18 | No public inbound traffic. Outbound is unrestricted in v1. |
 | D19 | User's auth: Claude Pro subscription for interactive work. Scheduled unattended runs need a separate decision. See Section 16. |
 | D20 | No local models in v1. See 19.7. |
@@ -175,6 +175,7 @@ Design against these. Each line is a requirement, not a hope.
 | A single agent or tool compromised | Access to unrelated personal data |
 | A malicious document or webpage ingested | Any change to instructions, permissions or security policy |
 | Encryption key leaked | No recovery path. There must be a documented rotation and re-encryption process |
+| Anthropic account compromised | Code execution on the VPS host, or access to secrets. The account is a path into the container while Remote Control is running; see 5.8 |
 | Secret committed or logged | Undetected exposure. Treat as compromised, rotate immediately |
 
 ### 5.3 Concrete host requirements
@@ -231,6 +232,29 @@ Logs are one of the largest accidental leak surfaces.
 - Never log: credentials, tokens, auth headers, full conversations, document contents, personal identifiers.
 - `runs/` retention: 90 days, then archived summaries only. Rotate.
 - `runs/` is inside `/srv/aios-data/` so it is encrypted in backups like everything else.
+
+### 5.8 Remote Control threat surface
+
+Remote Control (Section 9) is the mobile interface. It is a good fit for this architecture but it introduces one genuinely new risk that must be mitigated explicitly rather than accepted silently.
+
+**What it does not change.** Content Claude reasons over already reaches Anthropic as part of inference. Remote Control does not create a new path for that.
+
+**What it does change.**
+
+1. **Transcript retention.** While connected, the session transcript, including messages, responses and tool activity, is stored on Anthropic servers to keep devices in sync. Anything Claude reads into context during a Remote Control session is persisted off the VPS under Anthropic's data usage policy. Zero Data Retention configurations cannot use Remote Control, which is the clearest evidence this retention is real and material.
+2. **The Anthropic account becomes an access path.** Anyone who can authenticate as the user on claude.ai can view and steer the live session, which means driving an agent with filesystem access on the VPS. Without mitigation this makes the account a single point of failure, in direct tension with the core security objective.
+
+**Required mitigations. All of them, not a selection.**
+
+- **Run Remote Control inside the container, never on the host.** This is the load-bearing one. Compromise of the account then reaches a non-root process confined to `/data`, with no Docker socket, no host filesystem and no ability to administer the VPS. The container boundary from 5.4 becomes the thing that contains an account compromise.
+- **Treat the Anthropic account as a root credential.** Passkey or hardware security key. No SMS-based second factor. Unique password in the password manager. Review active sessions periodically.
+- **Never use `bypassPermissions`.** Start the server in default permission mode. Permission prompts forward to the phone, which is the intended approval path for the autonomy ladder in Section 13.
+- **Enforce in hooks, not only in prompts.** Permission mode does not defend against someone who has the account, because they answer the prompts. PreToolUse hooks that hard-block destructive actions, writes to `policy/` and `.claude/`, and any read of secrets, apply regardless of what is approved from a phone. Hooks are the control that survives account compromise; approval prompts are not.
+- **Enable `--sandbox`** for filesystem and network isolation on the session.
+- **Keep secrets unreadable.** `/etc/aios/secrets.env` is on the host, root-owned, outside the container. A Remote Control session must not be able to read it. Verify this explicitly.
+- **Know the off switch.** The `disableRemoteControl` setting turns the feature off entirely. It belongs in the kill switch procedure in 14.1.
+
+**The residual risk, stated plainly.** With these mitigations, an attacker holding the Anthropic account can read and modify the AIOS's personal data and converse as the user, but cannot reach host root, the secrets file, the backup encryption keys or the restic repository. That is the boundary this architecture is designed to hold, and it holds. The transcript retention remains an accepted cost of using a hosted model interactively. If a data category is ever too sensitive for that, handle it in a local-only SSH session instead (9.4), not by weakening anything above.
 
 ---
 
@@ -305,11 +329,14 @@ A subagent's output is information, not authority. One agent cannot grant anothe
 ## 7. Architecture
 
 ```
-                    iPhone / Mac / PC
-                           |
-                       Tailscale
-                           |
-                           v
+   iPhone (Claude app)          Mac / PC (admin)
+          |                            |
+   Anthropic API                   Tailscale
+   outbound only,                      |
+   initiated by VPS                    |
+          |                            |
+          +-------------+--------------+
+                        v
   +--------------------------------------------------+
   |                  HETZNER VPS                      |
   |                                                   |
@@ -322,7 +349,7 @@ A subagent's output is information, not authority. One agent cannot grant anothe
   |       +-- aios container (non-root, disposable)   |
   |       |     Claude Code                           |
   |       |     Python + Node                         |
-  |       |     aios-api (HTTP, Tailscale iface only) |
+  |       |     claude remote-control (tmux, outbound) |
   |       |     /data  <-- bind mount                 |
   |       |                                           |
   |  +-- /srv/aios-data/   (0700, local git repo)     |
@@ -345,9 +372,13 @@ A subagent's output is information, not authority. One agent cannot grant anothe
 
 ```
 AIOS -> Internet          YES (unrestricted in v1)
-Internet -> AIOS          NO, always
-Tailscale -> AIOS         YES, explicitly permitted services only
+Internet -> AIOS          NO, always. No inbound port, ever.
+Tailscale -> AIOS         YES, admin and break-glass only
+Remote Control            VPS dials out to the Anthropic API and polls.
+                          The phone never connects to the VPS.
 ```
+
+The last line is the point worth dwelling on. The mobile interface adds no listening service and no open port. The VPS initiates every connection. A self-built app would have inverted that, which is why this design is the more secure one despite involving a third party.
 
 Do not build outbound allowlists in v1. The boundary that matters is blocking unsolicited inbound. Outbound filtering adds a lot of breakage for a small marginal gain at this stage, and it can be added later if the threat model changes.
 
@@ -412,64 +443,66 @@ Do not build outbound allowlists in v1. The boundary that matters is blocking un
 
 ## 9. The mobile interface
 
-This is the part the user cares about most, so it is specified in detail.
+The user works primarily from an iPhone. The answer is Claude Code Remote Control, not a self-built app.
 
-### 9.1 The constraint
+### 9.1 What Remote Control is
 
-The Claude iOS app cannot connect to a self-hosted VPS. It talks to Anthropic's infrastructure. Claude Code on mobile runs in Anthropic-managed containers against a GitHub repo, which would put personal data in a third-party container and a git remote, contradicting D7, D10 and D13.
+`claude remote-control` runs on the VPS. The Claude iOS app and claude.ai/code become windows into that session. Claude keeps running on the VPS the entire time: code execution and filesystem access never leave the machine. This is different from Claude Code on the web, which executes in Anthropic's cloud, and it is the difference that makes it acceptable here.
 
-So the mobile interface must be built. The good news is that building it correctly once means the eventual native app is a thin shell.
+Verify against current documentation before building, but as specified at the time of writing:
 
-### 9.2 Three layers, built in this order
+- **Available on Pro**, which is the user's plan. Subscription auth only; API keys are not supported for Remote Control.
+- **Outbound HTTPS only. Never opens an inbound port.** The session registers with the Anthropic API and polls for work. This is strictly better for this threat model than any self-hosted service, which would have to listen.
+- **Permission prompts forward to the phone.** This is the approval surface for the autonomy ladder (Section 13), for free.
+- **Push notifications** when a long task finishes or a decision is needed.
+- **Attachments from the phone**, photos and files, which covers quick capture into `raw/notes/`.
+- **Survives disconnection.** Reconnects automatically and queues messages meanwhile.
+- Requires a real login via `/login`, a workspace trust acceptance in the project directory, `ANTHROPIC_BASE_URL` unset, and telemetry-disabling variables unset, since feature-flag evaluation depends on them.
 
-**Layer 1: SSH, from day one.** Tailscale plus a terminal app on the iPhone (Termius or Blink), connecting to a persistent `tmux` session running Claude Code. Ugly on a phone, full power, always works, zero additional attack surface. This is the fallback that must never stop working, including after the PWA exists. Do not remove it.
+### 9.2 How it runs here
 
-**Layer 2: the local API, Stage 3.** A small FastAPI (or equivalent) service inside the container, bound only to the Tailscale interface, never `0.0.0.0`. It shells out to Claude Code in headless mode and manages session state on disk.
+**Inside the container, not on the host.** See 5.8. This is the mitigation that contains an account compromise.
 
-Minimum endpoints:
+**Under tmux**, because Remote Control is a local process: if the process stops, the session goes offline. A systemd unit starting a tmux session that runs the server, with restart-on-failure, is the durable form.
 
-```
-POST /message          { text }              -> starts or continues a conversation
-GET  /stream/{id}                            -> server-sent events for the response
-GET  /brief/today                            -> the current daily brief
-GET  /proposals                              -> pending items awaiting approval
-POST /proposals/{id}/approve                 -> approve, with an audit entry
-POST /proposals/{id}/reject                  -> reject, with a reason
-POST /checkin                { ... }         -> the daily check-in payload
-GET  /health                                 -> liveness plus last-run status
-```
+**In server mode**, `claude remote-control`, started in `/data`. Constrain it:
 
-Requirements:
+- `--spawn session` or a low `--capacity`, so the server is not free to create many concurrent sessions.
+- `--permission-mode` left at default. Never `bypassPermissions`.
+- `--sandbox` on.
+- `--name` set to something recognisable in the session list.
 
-- Bind to the Tailscale IP only. Verify from outside the tailnet that it is unreachable.
-- Tailscale identity is the authentication. Do not build a login system. Optionally add a Tailscale ACL restricting this port to the user's own devices.
-- Every state-changing endpoint writes to `runs/`.
-- Approval endpoints are the only path by which anything moves from `proposals/` to executed. The model cannot self-approve.
+Connect the first time by scanning the QR code from the terminal, or by opening the session URL. After that the session appears in the Code list in the Claude iOS app.
 
-**Layer 3: the PWA, Stage 3.** Static files served by the same service. Add to Home Screen on iOS gives an app icon, full-screen chrome, and no App Store. It works over Tailscale exactly like any other page.
+### 9.3 What this replaces
 
-Screens, in priority order:
+An earlier draft of this brief specified a local HTTP API plus a PWA served over Tailscale. Remote Control makes most of that unnecessary, and unnecessary infrastructure is a security cost, not a neutral one. Dropped from v1:
 
-1. **Today.** The brief, what is coming, what needs a decision. The default screen.
-2. **Chat.** Streaming conversation with the AIOS.
-3. **Approvals.** The proposals queue. One-tap approve or reject with a reason.
-4. **Check-in.** A short form, four or five questions, thirty seconds to complete. See 12.2.
-5. **Goals.** Current goals, state, next action per goal.
+- the HTTP service (chat, streaming, approvals), since Remote Control provides all of it;
+- the approvals queue UI, since permission prompts forward to the phone natively;
+- the push mechanism and any self-hosted ntfy, both included;
+- the PWA itself.
 
-Design constraints: offline-tolerant reading of the last brief, large touch targets, no notifications from this layer in v1.
+What the conversation surface does less elegantly than a purpose-built screen: the daily brief, the check-in form and the goals view. In v1 these are conversational. Ask for the brief; the check-in is a short exchange the AIOS initiates. If after a month of real use that proves too clunky, revisit a small read-only PWA as a Stage 9 item, behind Tailscale, and justify it then. Do not build it speculatively.
 
-**Later: the native app.** When the user builds it, it consumes the same API. The PWA becomes the reference implementation. Nothing is wasted.
+### 9.4 SSH over Tailscale stays
 
-### 9.3 Notifications
+Tailscale and SSH remain, for four reasons, and none of them are optional:
 
-The PWA cannot reliably push on iOS over a private network. Do not fight this in v1. Options in order of preference:
+1. **Break-glass.** If Remote Control is unavailable, the account is locked, or the feature is disabled, the user must still be able to reach the machine.
+2. **Administration.** Host-level work, firewall changes, backups, restores and anything touching `/etc/aios/secrets.env` happens over SSH on the host, outside the container, and never through Remote Control.
+3. **Highly-sensitive work.** Any session working on material classified `highly-sensitive` (6.4) runs locally over SSH with Remote Control off, so the transcript is not retained off-box. This is the release valve that lets the rest of the system use Remote Control freely.
+4. **Recovery.** RECOVERY.md must not depend on Remote Control.
 
-1. Nothing. The user opens the app. Honest and simple.
-2. Self-hosted ntfy on the VPS behind Tailscale, with the iOS ntfy client. Notification bodies must contain no sensitive content, only a pointer such as "brief ready" or "2 items need approval". Content is read in the app.
+So Tailscale is still built in Stage 1 exactly as specified. It is no longer carrying the day-to-day interface, which means it is doing less work and is less likely to break.
 
-Do not route notification content through any third-party push service.
+### 9.5 The later native app
 
----
+If the user still wants a bespoke app after living with this, that is a Stage 9+ decision made with real usage data about what is actually missing. Building it in v1 would be solving a problem that has not been demonstrated.
+
+### 9.6 What Remote Control is not
+
+It is the human interface, not the automation runtime. Scheduled work (daily brief generation, weekly review, audit, backups) runs headlessly via systemd timers into the container, as specified in Stage 6, and has nothing to do with Remote Control. Keep the two clearly separate: one is how the user talks to the system, the other is how the system runs when nobody is watching.
 
 ## 10. Build stages
 
@@ -525,11 +558,12 @@ This is where the system becomes usable, and it comes before connections deliber
 2. Write `CLAUDE.md`. Contents: the persona (Section 11), the principles from Section 4 by reference, the trust ladder, the untrusted-content rule, the autonomy ladder, the tool registry, and the operating rituals. Keep it tight. It is loaded on every run, so every line costs context on every request.
 3. Write `policy/security.md`, `policy/trust.md` and `policy/autonomy.md` from Sections 5, 6 and 13.
 4. Build the hooks: PreToolUse guards on destructive commands, the untrusted-content write guard (5.6), and an audit-logging hook writing to `runs/`.
-5. Build the API service (9.2). Bind to the Tailscale interface only. Verify from outside the tailnet that it is unreachable.
-6. Build the PWA (9.3). Test Add to Home Screen on the iPhone.
-7. Build the kill switch (Section 14) and test it before any scheduled run exists.
+5. Lock down the Anthropic account before enabling Remote Control: passkey or hardware security key, no SMS second factor, unique password in the password manager. This is now a credential that reaches the VPS (5.8), so treat it accordingly. **STOP** and confirm with the user that this is done.
+6. Start Remote Control inside the container per 9.2: under tmux, in server mode, in `/data`, default permission mode, `--sandbox` on, capacity constrained. Connect from the iPhone via the QR code.
+7. Verify the container boundary holds from a Remote Control session: it cannot read `/etc/aios/secrets.env`, cannot reach the Docker socket, cannot escalate to host root, and cannot write to `policy/` or `.claude/` when the hook conditions apply.
+8. Build the kill switch (Section 14), including `disableRemoteControl`, and test all layers before any scheduled run exists.
 
-*Acceptance:* the user holds a conversation with the AIOS from their iPhone home screen over Tailscale. The service is unreachable from outside the tailnet, verified. The kill switch stops everything and has been demonstrated.
+*Acceptance:* the user holds a conversation with the AIOS from the Claude iOS app, and a tool call requiring approval prompts on the phone and is correctly refused when denied. The container boundary checks in step 7 all pass. The kill switch stops everything and has been demonstrated. No inbound port is open on the VPS, verified by external scan.
 
 ---
 
@@ -687,7 +721,7 @@ Not every goal should become a project. Many are better served by a system. A go
 
 ### 12.2 The daily check-in
 
-Thirty seconds. Delivered through the PWA. This is the ground truth the entire coaching layer runs on, so it must be short enough that the user actually does it on a bad day.
+Thirty seconds, as a short exchange in the Claude app. This is the ground truth the entire coaching layer runs on, so it must be short enough that the user actually does it on a bad day.
 
 Fixed questions:
 
@@ -824,9 +858,10 @@ Must exist and be tested before the first scheduled run. Three layers, each usab
 
 1. **Pause:** `touch /srv/aios-data/.halt`. Every scheduled run checks for this file first and exits immediately if present. Cheapest, fastest, reversible.
 2. **Stop:** `systemctl stop aios-*.timer` disables all scheduled activity while leaving the interactive system usable.
-3. **Full stop:** `docker compose down` stops everything. Data is untouched on the host.
+3. **Full stop:** `docker compose down` stops everything, Remote Control included. Data is untouched on the host.
+4. **Cut the remote path:** the `disableRemoteControl` setting turns Remote Control off entirely, and revoking sessions from the Anthropic account settings drops any connected device. Use this if the account rather than the VPS is what is suspected.
 
-The user must have all three memorised or written somewhere they can reach from their phone. Put them at the top of RECOVERY.md and on the PWA health screen.
+The user must have all four memorised or written somewhere they can reach from their phone without the AIOS. Put them at the top of RECOVERY.md and in the password manager alongside the recovery credentials.
 
 ### 14.2 Incident response
 
@@ -834,7 +869,7 @@ If compromise is suspected:
 
 1. Identify. What is the evidence.
 2. Contain. Kill switch layer 3. Tailscale ACL off if needed.
-3. Revoke. Rotate Anthropic credentials, Google OAuth, Tailscale keys, SSH keys, in that order.
+3. Revoke. Rotate Anthropic credentials first, because that account can reach the running session, then Google OAuth, Tailscale keys and SSH keys. Sign out everywhere on the Anthropic account and disable Remote Control.
 4. Preserve. Snapshot the VPS before changing anything, for later analysis.
 5. Assess exposure. What data was reachable, what left the machine, check `runs/` and API usage.
 6. Rebuild. New VPS from the rebuild package. Do not reuse the compromised one.
@@ -904,6 +939,8 @@ Present the user with the trade-off honestly:
 - **Upgrade to Max.** More headroom, one credential, simplest operationally.
 - **Pro for interactive plus an API key for scheduled runs.** Cleanest separation, hard spend caps available, cost scales with how chatty the system is. Two credentials to manage.
 
+Note the interaction with Remote Control: it requires subscription authentication and does not support API keys. So the subscription is not optional if the mobile interface is wanted. An API key, if used, is only for headless scheduled runs, which is a clean split: the subscription is the human path, the key is the automation path, and each can be limited independently.
+
 Whichever is chosen:
 
 - Set a provider-level spend limit or alert. A compromised or looping agent is both a privacy incident and a large bill.
@@ -967,10 +1004,21 @@ The build is not complete until every line is true and has been demonstrated, no
 - [ ] Backup failures alert; successes do not
 - [ ] **Full recovery test performed on a fresh VPS and RECOVERY.md corrected from it**
 
+**Remote Control**
+
+- [ ] Anthropic account protected with a passkey or hardware key, no SMS second factor
+- [ ] Remote Control runs inside the container, not on the host
+- [ ] Runs under tmux with a systemd unit, survives reboot and SSH disconnect
+- [ ] Default permission mode, `--sandbox` on, capacity constrained, never `bypassPermissions`
+- [ ] A Remote Control session cannot read `/etc/aios/secrets.env`, reach the Docker socket, or escalate to host root, all verified
+- [ ] PreToolUse hooks block destructive actions regardless of phone approval, verified by a deliberate attempt
+- [ ] `disableRemoteControl` documented in the kill switch procedure
+- [ ] Highly-sensitive work has a documented local-only SSH path with Remote Control off
+
 **Interface and use**
 
-- [ ] PWA works from the iPhone home screen over Tailscale
-- [ ] API unreachable from outside the tailnet, verified from outside
+- [ ] Conversation works from the Claude iOS app, with a permission prompt correctly approved and correctly denied
+- [ ] External port scan still shows nothing open
 - [ ] SSH fallback still works and is documented
 - [ ] Kill switch, all three layers, tested
 - [ ] Seven consecutive daily check-ins recorded
@@ -1016,7 +1064,11 @@ Recorded so the reasoning is auditable rather than mysterious.
 
 **19.11 Defined the kill switch.** The design brief required one before any scheduled run and never said what it was. Section 14.1 specifies three layers.
 
-**19.12 Specified the mobile path.** The user wants to work from their iPhone. The Claude iOS app cannot reach a self-hosted VPS, and routing the AIOS through Anthropic-managed containers and a GitHub repo would contradict the security architecture. Section 9 specifies the local API plus PWA over Tailscale, with SSH as the permanent fallback and the API designed as the seam the eventual native app plugs into.
+**19.12 Specified the mobile path, then corrected it.** The first version of this brief claimed the Claude iOS app could not reach a self-hosted VPS and specified a local HTTP API plus a PWA over Tailscale. That was wrong. Claude Code Remote Control does exactly this: the session runs on the VPS, the app is a window into it, and it is available on Pro. Section 9 now specifies Remote Control and drops the API and PWA entirely.
+
+This is a better outcome on the axis that matters most. Remote Control makes only outbound HTTPS connections and never opens an inbound port, whereas the PWA required a listening service on the VPS. It also provides permission prompts on the phone, push notifications and file attachment, all of which were going to be built by hand.
+
+The cost is real and is documented rather than glossed: session transcripts are retained on Anthropic servers while connected, and the Anthropic account becomes a path to code execution on the VPS. Section 5.8 sets out the mitigations, of which running Remote Control inside the container rather than on the host is the load-bearing one. Tailscale and SSH remain for administration, break-glass, recovery and highly-sensitive work.
 
 **19.13 Collapsed the security policy.** Fifty-one sections of largely generic and heavily repetitive policy became Section 5 plus the checklist in Section 17. The original was written as a policy document, full of "consider" and "where appropriate", which an agent cannot act on consistently. What remains is testable.
 
