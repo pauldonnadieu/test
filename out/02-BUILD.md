@@ -122,6 +122,7 @@ At minimum the script checks:
 - [ ] All four kill switch layers work
 - [ ] No inbound port is open
 - [ ] `bin/aios` exists and every verb is read-only or append-only
+- [ ] The full directory layout exists, including `projects/`, and the hygiene lint runs
 
 **What needs to exist.** The layout from `01-ARCHITECTURE.md` §5. `CLAUDE.md` and the `policy/` files, written from `03-OPERATING.md`. Hooks for destructive commands and the quarantine write guard. The `aios` CLI. Remote Control inside the container under tmux with a systemd unit.
 
@@ -175,6 +176,7 @@ Cover: the shape of a normal week; goals across business, health, money, career,
 - [ ] At least a week of time blocks logged
 - [ ] One weekly review produced
 - [ ] You read that review voluntarily, without being reminded
+- [ ] Over that week you filed nothing by hand: everything you mentioned in conversation ended up in the right place on its own
 
 **Constraints.** Time and energy are self-reported; there is no wearable here, so capture must be one tap or one short command. A form is the same as no data. Nothing classified sensitive or above goes in the daily brief, because `aios brief` is readable from any device.
 

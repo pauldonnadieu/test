@@ -144,8 +144,13 @@ The layout is the architecture. It encodes the trust boundary, the backup bounda
     done/YYYY-MM.md
   quarantine/                    EVERYTHING from outside lands here first
     web/  docs/  api/
-  scrape.db                      SQLite: scraped content and its summaries
-  notes/                         your own captures
+  projects/                      things you are building; see 5.1
+    <slug>/
+      README.md                  what, why, which goal it serves, state, next action
+      notes/                     working notes and decisions
+      data/                      project-owned data, including its own scrape.db
+      out/                       artefacts it produces
+  notes/                         your own captures, unattached to a project
   wiki/                          compiled knowledge, maintained by the AIOS
   decisions/log.md               append-only: what, when, why
   improvement/
@@ -169,7 +174,25 @@ The layout is the architecture. It encodes the trust boundary, the backup bounda
 
 **Why `wiki/` is separate from the raw sources.** `quarantine/` and `scrape.db` are immutable source. `wiki/` is compiled output the system maintains. It rewrites the wiki, never the source, so every claim can be traced back to what it was compiled from. It is also what stops the same content being re-summarised forever.
 
-**Formats.** Markdown for prose you read. JSONL for append-only event streams, because a script and a model can both parse it. SQLite only for scraped volume.
+**Formats.** Markdown for prose you read. JSONL for append-only event streams, because a script and a model can both parse it. SQLite only where volume demands it.
+
+### 5.1 Projects
+
+Anything you are building lives under `projects/<slug>/`: scraping projects, the phone app, a side hustle, a renovation. Each owns its own data rather than sharing a global store, which means per-project retention, per-project isolation, and deleting a project actually deletes its data.
+
+Each `README.md` records what it is, why it exists, **which goal it serves**, current state and next action. A project that serves no goal is worth noticing rather than forbidding: it may be genuine exploration, or it may be the novelty-seeking pattern in `context/patterns.md` wearing a folder. The weekly review can see the difference; a flat directory of projects cannot.
+
+Projects are also where the goals-versus-projects-versus-systems distinction becomes visible. A project that has been open for six months is usually a goal that needed to become a system.
+
+### 5.2 Who maintains all this
+
+**The AIOS does, entirely.** You never file anything.
+
+That is not a convenience, it is the point. Your own mission document puts it as taking work off your plate rather than providing another interface through which you manage work. A folder structure you have to maintain is the second thing, and it would quietly become the reason you stop using the system.
+
+So filing happens as a side effect of conversation. You mention you are worried about something and it lands in the right place with provenance. You say a goal is done and the file moves to achieved. You describe something you are building and the project folder appears with a README. You capture a thought on your phone and it is filed, and compiled into the wiki if it belongs there.
+
+The operating rules for this are in `03-OPERATING.md` §6.9. The one that matters most: **when it is unsure where something goes, it files it in the most likely place and tells you, rather than asking.** Asking where to file something is exactly the mental load the system exists to remove, and a wrong guess you can correct in one sentence is cheaper than an unfiled thought you lose.
 
 ---
 
@@ -229,6 +252,6 @@ Maintain `policy/dataflow.md` as one row per data category: source, what process
 | Check-ins | You | `/data/checkins` | Excerpts only | Encrypted | Indefinite |
 | Goals, context | Intake | `/data/context` | Excerpts only | Encrypted | Indefinite |
 | Time, energy | You, CLI or app | `/data/*.jsonl` | Aggregates | Encrypted | Indefinite |
-| Scraped content | Web | `scrape.db` | Yes, quarantined | Encrypted | Per source |
+| Scraped content | Web | `projects/<slug>/data/` | Yes, quarantined | Encrypted | Per project |
 | Run logs | System | `/data/runs` | No | Encrypted | 90 days |
 | Secrets | You | `/etc/aios` | Never | Separately encrypted | Until rotated |

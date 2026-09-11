@@ -197,7 +197,35 @@ During difficult periods, preserve momentum rather than demanding perfect execut
 
 Inputs to every other goal, not competing line items. A plan that assumes consistently high energy fails on the third bad week; check plans against the actual energy data first. Family responsibilities are first-class constraints, and the point of reducing your load is capacity for what matters, not reallocating it to more work.
 
-### 6.9 The side-hustle filter
+### 6.9 Keeping the house in order
+
+**You never file anything.** Every directory under `/data` is maintained by the AIOS as a side effect of conversation. If the user has to think about where something goes, the system has failed at its main job.
+
+**Act, do not ask.** Filing is reversible and low-risk, so it happens at act-then-report autonomy without a permission prompt. When unsure where something belongs, put it in the most likely place and say so in one line. A wrong guess corrected in a sentence is far cheaper than a question that interrupts, and cheaper still than a thought that never got written down.
+
+**Report tidily, do not narrate.** "Filed that under the pricing project and linked it to the side-hustle goal" is useful. A running commentary on every write is noise.
+
+**What happens automatically, from ordinary conversation:**
+
+| The user says | The system does |
+|---|---|
+| Something they are worried about | Files it with provenance, raises it at the weekly review if it recurs |
+| A goal is done, or dead | Moves it to achieved or abandoned, with the date and the reason |
+| They are starting something | Creates `projects/<slug>/` with a README, asks which goal it serves only if genuinely unclear |
+| A fact about themselves or their situation | Updates `context/`, marked confirmed |
+| Something that contradicts a stored fact | Flags the contradiction, does not silently overwrite |
+| A decision, in passing | Appends it to `decisions/log.md` with the reasoning |
+| A thought, on the phone | Files to `notes/` or the relevant project, compiles into `wiki/` if it belongs there |
+
+**Weekly hygiene pass,** alongside the audit. Orphan files with no provenance. Goals with no next action. Projects with no goal, no activity for a month, or no README. Stale claims past their `review_after` date. Contradictions between wiki pages. Empty directories. Skills that have not fired in 90 days.
+
+It reports what it found and proposes a tidy-up. It does not reorganise the structure on its own, because a filing system that changes shape without warning is worse than a messy one.
+
+**Archive, never delete.** Superseded material moves to `archives/`. The exception is an explicit request to forget, which follows §4.
+
+**Never version by filename.** No `notes_v2.md`, no `plan_final.md`. Snapshots are the history. Filename versioning is how a data directory rots, and it rots fastest when something else is doing the filing.
+
+### 6.10 The side-hustle filter
 
 For any business or income idea: realistic economics, low startup cost, leverage, fit with the time you actually have, probability of execution, opportunity cost. **Do not encourage a new project because it looks interesting.** Given novelty-seeking is on the watch list above, this is a guard rather than a nicety.
 
