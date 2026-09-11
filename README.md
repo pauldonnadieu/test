@@ -2,32 +2,43 @@
 
 A personal AI operating system: coach, mentor, strategic partner and executive assistant. Runs on a self-hosted VPS, holds highly sensitive personal data, controlled from an iPhone.
 
+These documents are the briefing pack. Hand them to Claude Code to build the system from scratch, then to build what comes after it.
+
 ## What is here
 
-**Build-time.** Read these to build the system. `BUILD.md` goes obsolete once the build is done; `ARCHITECTURE.md` does not.
+**Read these to build it.**
 
 | File | Purpose |
 |---|---|
-| [docs/BUILD.md](docs/BUILD.md) | The build itself. Stages, acceptance gates, stop points. Start here. |
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Decisions, threat model, network shape, filesystem layout, interface strategy. Reference during and after the build. |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | The shape and the reasoning. Decisions, threat model, network, filesystem, interfaces. Start here. |
+| [docs/BUILD.md](docs/BUILD.md) | The build itself. Stages 0 to 8, acceptance gates, stop points. |
+| [docs/EXTENSIONS.md](docs/EXTENSIONS.md) | What to build after the core works: the companion app, connections, device automation, extra backup layers. |
 
-**Runtime.** These are deployed as-is to the VPS. They are the system's operating instructions, loaded on every session, so they are kept deliberately short.
+**Drafts, not deployables.**
 
-| File | Deployed to |
+`reference/` holds starting points for the files that will live on the VPS. They are drafts to adapt once the Stage 4 intake reveals who the user actually is, not artifacts to copy blindly. The one constraint worth keeping: `CLAUDE.md` loads on every session, so it stays short. Detail belongs in `policy/`.
+
+| File | Becomes |
 |---|---|
-| [runtime/CLAUDE.md](runtime/CLAUDE.md) | `/srv/aios-data/CLAUDE.md` |
-| [runtime/policy/security.md](runtime/policy/security.md) | `/srv/aios-data/policy/security.md` |
-| [runtime/policy/trust.md](runtime/policy/trust.md) | `/srv/aios-data/policy/trust.md` |
-| [runtime/policy/autonomy.md](runtime/policy/autonomy.md) | `/srv/aios-data/policy/autonomy.md` |
-| [runtime/SCHEMAS.md](runtime/SCHEMAS.md) | `/srv/aios-data/policy/schemas.md` |
-| [runtime/RECOVERY.template.md](runtime/RECOVERY.template.md) | `/opt/aios-rebuild/RECOVERY.md`, filled in during Stage 7 |
+| [reference/CLAUDE.md](reference/CLAUDE.md) | `/srv/aios-data/CLAUDE.md` |
+| [reference/policy/security.md](reference/policy/security.md) | `/srv/aios-data/policy/security.md` |
+| [reference/policy/trust.md](reference/policy/trust.md) | `/srv/aios-data/policy/trust.md` |
+| [reference/policy/autonomy.md](reference/policy/autonomy.md) | `/srv/aios-data/policy/autonomy.md` |
+| [reference/SCHEMAS.md](reference/SCHEMAS.md) | `/srv/aios-data/policy/schemas.md` |
+| [reference/RECOVERY.template.md](reference/RECOVERY.template.md) | `/opt/aios-rebuild/RECOVERY.md`, completed in Stage 7 |
 
 ## Read order
 
-1. `docs/ARCHITECTURE.md` for the shape and the reasoning.
-2. `docs/BUILD.md` and work the stages in order.
-3. Deploy `runtime/` where Stage 3 says to.
+1. `docs/ARCHITECTURE.md` for the shape and why it is that shape.
+2. `docs/BUILD.md`, working the stages in order. Do not skip a stage's acceptance test.
+3. `docs/EXTENSIONS.md` only once the core has run for a month in real daily use.
+
+## The shape, in brief
+
+A Hetzner VPS runs one Docker container holding Claude Code and the AIOS files. Personal data lives on a host bind mount, encrypted into restic snapshots on Google Drive, with keys in a password manager. No inbound port is ever open: the phone reaches the system through Claude Code Remote Control, which dials out. Tailscale and SSH remain for administration, break-glass and recovery.
+
+The system holds the user's goals, takes a thirty-second daily check-in, tracks self-reported time and energy, and produces a weekly review that finds the real bottleneck. It improves by compounding its files, never by granting itself more authority.
 
 ## Origin
 
-Distilled from five source documents: a design brief, a data security policy, a mission and partnership statement, an architecture brief, and a memory and data trust policy. Section 9 of `ARCHITECTURE.md` records what changed and why.
+Distilled from five source documents: a design brief, a data security policy, a mission and partnership statement, an architecture brief, and a memory and data trust policy. `ARCHITECTURE.md` Section 9 records every change and why it was made.

@@ -90,7 +90,7 @@ Written by `aios time start` and `aios time stop`, or by hand, or later by an ap
 {"at":"2026-09-11T14:30:00+10:00","level":2,"note":"post-lunch, office day","source":"self"}
 ```
 
-`source` is `self`, `checkin`, or the name of a device integration if one is ever added. The daily check-in writes one of these automatically, so this file is only for additional observations during the day.
+`source` is `self` (a deliberate observation), `checkin` (written by the daily check-in), or `block` (captured at the end of a time block). All of it is self-reported; there is no wearable in this setup, so the only thing that makes this data exist is how fast it is to enter. One tap or one short command. Never a form.
 
 ---
 

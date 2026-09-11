@@ -68,7 +68,7 @@ Container requirements, all mandatory: non-root with matched UID, no `--privileg
 Where the system becomes usable. Before connections, deliberately (P4).
 
 1. Create the filesystem layout from `ARCHITECTURE.md` Section 5.
-2. Deploy the runtime files: `runtime/CLAUDE.md` to `/srv/aios-data/CLAUDE.md`, and `runtime/policy/*` plus `runtime/SCHEMAS.md` to `/srv/aios-data/policy/`. Deploy them as-is. Do not paraphrase them into something new.
+2. Write the runtime files: `/srv/aios-data/CLAUDE.md` and `/srv/aios-data/policy/{security,trust,autonomy,schemas}.md`. Drafts are in `reference/`; treat them as a starting point and adapt them to what the intake reveals, but do not let CLAUDE.md grow. It loads on every session, so every line costs context on every request. If it passes about 150 lines, something belongs in `policy/` instead.
 3. Build the hooks in `.claude/hooks/`: PreToolUse guards on destructive commands, the untrusted-content write guard, and an audit-logging hook writing to `runs/`.
 4. Build the `aios` CLI (`ARCHITECTURE.md` 6.3). Small verb set, every verb read-only or append-only.
 5. **STOP.** Lock down the Anthropic account before enabling Remote Control: passkey or hardware key, no SMS second factor, unique password in the password manager. This is now a credential that reaches the VPS. Confirm with the user that it is done before continuing.
@@ -122,9 +122,9 @@ Build the rituals in this order, and run every one manually for at least a week 
 4. **Weekly review.** The most valuable ritual in the system.
 5. **Bottleneck analysis** and the **self-sabotage protocol**, as on-demand skills at first.
 
-The content of each is defined in `runtime/CLAUDE.md`; the data formats in `runtime/SCHEMAS.md`.
+The content of each is defined in `reference/CLAUDE.md`; the data formats in `reference/SCHEMAS.md`.
 
-**STOP** at the end of this stage and ask which connection comes first. Recommend calendar, read-only, via MCP. Email second and read-only for longer, because it is the main injection vector. Also worth asking here: whether sleep and energy should come from Apple Health rather than self-report, since automatic beats honest-but-forgotten.
+**STOP** at the end of this stage and ask which connection comes first. Recommend calendar, read-only, via MCP. Email second and read-only for longer, because it is the main injection vector. Sleep and energy are self-reported, by design. There is no wearable in this setup, so the capture path has to be fast enough to survive a bad day: one tap or one short command, never a form. This is the strongest argument for the app in `EXTENSIONS.md`, and until it exists, keep the CLI verbs blunt.
 
 *Acceptance:* seven consecutive daily check-ins recorded, at least one week of time blocks logged, one weekly review produced, and the user voluntarily read the weekly review rather than being reminded to.
 
@@ -156,7 +156,7 @@ Not optional and not later. Until this passes, the system is one bad day from to
 5. Retention: 7 daily, 4 weekly, 12 monthly. Prune on schedule.
 6. Create `aios-secrets.enc`: the contents of `/etc/aios/secrets.env` plus anything else needed to operate, encrypted with `age` under a passphrase held only in the password manager. Upload to Drive. Regenerate whenever a secret changes.
 7. Upload the rebuild package to Drive unencrypted, after explicitly scanning it for secrets and personal data. Do not assume it is clean; check.
-8. Write `RECOVERY.md` from `runtime/RECOVERY.template.md`, assuming the reader has only Google Drive and the password manager.
+8. Write `RECOVERY.md` from `reference/RECOVERY.template.md`, assuming the reader has only Google Drive and the password manager.
 9. **Run the recovery test.** Provision a throwaway VPS, follow RECOVERY.md exactly, improvise nothing, and write down every step that was missing or wrong. Fix RECOVERY.md, then destroy the test VPS.
 10. Schedule backups via systemd timer. Alert on failure, not on success.
 

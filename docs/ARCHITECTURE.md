@@ -304,7 +304,9 @@ capture ergonomics             goals, patterns, coaching
 task checkboxes                the weekly review
 ```
 
-**What matters now is the data contract, not the app.** Define the time, energy and task schemas (`runtime/SCHEMAS.md`) and the weekly review can do trend analysis immediately from CLI-entered or hand-entered data. The app, when built, becomes a nicer capture surface over a model that already works. Build the app first and it defines the schema by accident, then everything migrates.
+There is no wearable in this setup. Time and energy are self-reported, which makes capture friction the binding constraint on whether any of the coaching data exists at all. A button is the difference between data and no data. See `EXTENSIONS.md`.
+
+**What matters now is the data contract, not the app.** Define the time, energy and task schemas (`reference/SCHEMAS.md`) and the weekly review can do trend analysis immediately from CLI-entered or hand-entered data. The app, when built, becomes a nicer capture surface over a model that already works. Build the app first and it defines the schema by accident, then everything migrates.
 
 This is why Section 5 has `time/`, `energy/` and `tasks/` in v1 even though there is no app. They cost almost nothing and they are what the coaching layer needs anyway.
 
@@ -380,4 +382,8 @@ Recorded so the reasoning is auditable rather than mysterious.
 
 **9.16 Put backup and recovery before the clever parts.** A system holding this much irreplaceable personal context should not run a week without a tested restore, so the restore test is an acceptance gate rather than a good intention.
 
-**9.17 Split build-time from runtime documentation.** The single-document version mixed instructions read once with policy loaded on every session forever. Those pull in opposite directions: the build wants to be thorough, the runtime wants to be brutally short. Separating them lets each be optimised properly, and makes the runtime files deployable as-is rather than reconstructed from a description.
+**9.17 Split build-time from runtime documentation.** The single-document version mixed instructions read once with policy loaded on every session forever. Those pull in opposite directions: the build wants to be thorough, the runtime wants to be brutally short. Separating them lets each be optimised properly. The runtime drafts live in `reference/` as starting points to adapt after the intake, not as artifacts to deploy blindly.
+
+**9.18 Added build guidance for the companion app.** The user wants a purpose-built interface for time management, Pomodoro, alarms, task lists and trend analysis, and eventually Android too. `EXTENSIONS.md` covers what it is for, what it must not do, the four build phases, the offline-first requirement and the technology recommendation. The significant architectural point recorded there: the app is the reason an HTTP API returns to the VPS, because a timer needs to POST a completed block rather than hold a conversation about it. It returns with a far smaller surface than the one v1 deliberately avoided: Tailscale-bound, data-only, per-device revocable tokens, writing through the same path as the CLI.
+
+**9.19 Removed the wearable assumption.** An earlier draft suggested sourcing sleep and energy from Apple Health. There is no watch and no Apple Health in this setup, so all of it is self-reported. That makes capture friction the binding constraint on whether the coaching data exists at all, which is the strongest argument for the app and the reason its first phase is capture and nothing else.
