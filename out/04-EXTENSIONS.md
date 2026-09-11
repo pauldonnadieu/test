@@ -40,7 +40,7 @@ Ship each before starting the next.
 
 **Phase 2: Pomodoro.** A 25/5 timer writing the same time-block record, with a local notification at each interval. A completed 25-minute focus block is a finished pomodoro; the data model already covers it.
 
-**Phase 3: tasks.** A checklist reading and writing `tasks/active.md`. Check, add, reorder. It is a list, not a task manager.
+**Phase 3: tasks.** A checklist reading and writing `tracking/tasks.md`. Check, add, reorder. It is a list, not a task manager.
 
 **Phase 4: trends.** Read-only views of what the weekly review already computes. Focus-block completion by hour. Energy across the week. Time by goal. Office days against everything else.
 
@@ -63,7 +63,7 @@ So the app is why an HTTP API returns. Keep the surface as small as it can be:
 - **A per-device bearer token**, in `/etc/aios/` and never in `/srv/aios-data/`, revocable individually so a lost phone is one line deleted.
 - **Runs in the container**, same user, same `/data` confinement.
 - **Writes through `bin/aios`** rather than touching files directly, so there is one write path and one set of rules rather than two that drift.
-- **Logged to `runs/`** like every other state change.
+- **Logged to `system/runs/`** like every other state change.
 
 Anything beyond that list is scope creep and should be refused.
 
@@ -89,7 +89,7 @@ Alternatives, and why not: native Swift gives the best widgets and timers and wo
 
 **Phase 2** is done when a pomodoro survives the phone locking, the app backgrounding and the network dropping mid-block.
 
-**Phase 3** is done when you have run a week without opening `tasks/active.md` any other way.
+**Phase 3** is done when you have run a week without opening `tracking/tasks.md` any other way.
 
 **Phase 4** is done when it shows you something you disagree with and the underlying data settles the argument.
 
@@ -102,10 +102,10 @@ Alternatives, and why not: native Swift gives the best widgets and timers and wo
 Sources and volume are yours to define. The security shape is fixed regardless of what you scrape, and it is in `03-OPERATING.md` §5. The summary here is what the pipeline looks like structurally.
 
 ```
-fetch  ->  quarantine (scrape.db, raw, enveloped, provenance)
+fetch  ->  untrusted (projects/<slug>/data/, raw, enveloped, provenance)
        ->  summarise  (no tools, no write access beyond its own row)
        ->  summary    (still external-trust, never promoted to fact)
-       ->  compile    (into wiki/, on demand, with citation back to source)
+       ->  compile    (into knowledge/wiki/, on demand, with citation back to source)
 ```
 
 **Three properties to preserve as it grows.**
@@ -116,7 +116,7 @@ The summariser has no tools. A successful injection can then produce bad text, w
 
 Compile once. The wiki layer exists so the same content is never re-summarised, which is both the cost lever and the context-rot defence.
 
-**Storage.** SQLite in `/data`, not a database server, until SQLite actually breaks. A server is a service, a credential, a backup requirement and a failure mode.
+**Storage.** SQLite inside the project, not a database server, until SQLite actually breaks. A server is a service, a credential, a backup requirement and a failure mode.
 
 **Volume discipline.** Bulk summarisation is the single most likely thing to exhaust a Pro allowance. Put it on a free tier, which is safe for public scraped text and unsafe for anything personal. Rate-limit the fetcher. Alert on outbound volume, because a scraper that loops looks exactly like exfiltration.
 
@@ -128,7 +128,7 @@ One at a time, each fully settled before the next.
 
 **Answer in writing before connecting anything,** and put the result in `policy/dataflow.md`: what data can it reach, what credentials does it receive and where do they live, what does it send out, can it write or delete or only read, can it trigger actions, can its access be narrowed, can the credential be revoked independently, does the provider retain data, what happens if it is compromised.
 
-**Then:** start read-only as the default that has to be argued out of, not a phase to pass through quickly. Start at autonomy level 0 or 1 regardless of how safe it looks. Everything retrieved lands in quarantine with provenance and enters context enveloped. One credential, one purpose, revocable alone.
+**Then:** start read-only as the default that has to be argued out of, not a phase to pass through quickly. Start at autonomy level 0 or 1 regardless of how safe it looks. Everything retrieved lands in `untrusted/` with provenance and enters context enveloped. One credential, one purpose, revocable alone.
 
 ---
 

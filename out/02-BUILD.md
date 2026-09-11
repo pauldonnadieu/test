@@ -22,7 +22,7 @@ Eight goals in order. Each states an outcome, how to know it is met, and the con
 
 **Verify rather than assume.** Tool versions, CLI flags and plan limits drift. Anything specific here was true when written.
 
-**Record decisions** in `decisions/log.md`, append-only, with reasoning.
+**Record decisions** in `decisions.md`, append-only, with reasoning.
 
 ---
 
@@ -117,14 +117,15 @@ summary() {
 At minimum the script checks:
 
 - [ ] A Remote Control session cannot read `/etc/aios/secrets.env`, reach the Docker socket, or become host root
-- [ ] A hook blocks a write to `policy/` or `.claude/` in a session that has read from `quarantine/`
+- [ ] A hook blocks a write to `system/policy/` or `system/.claude/` in a session that has read from `untrusted/`
 - [ ] A deliberate attempt to have a hook-blocked action approved from the phone still fails
 - [ ] All four kill switch layers work
 - [ ] No inbound port is open
 - [ ] `bin/aios` exists and every verb is read-only or append-only
-- [ ] The full directory layout exists, including `projects/`, and the hygiene lint runs
+- [ ] The directory layout exists with `START-HERE.md` and a README in every directory
+- [ ] The hygiene lint runs and the structure lint confirms seven top-level directories
 
-**What needs to exist.** The layout from `01-ARCHITECTURE.md` §5. `CLAUDE.md` and the `policy/` files, written from `03-OPERATING.md`. Hooks for destructive commands and the quarantine write guard. The `aios` CLI. Remote Control inside the container under tmux with a systemd unit.
+**What needs to exist.** The layout from `01-ARCHITECTURE.md` §5. `CLAUDE.md` and the `system/policy/` files, written from `03-OPERATING.md`. Hooks for destructive commands and the `untrusted/` write guard. The `aios` CLI. Remote Control inside the container under tmux with a systemd unit.
 
 **Before enabling Remote Control:** the Anthropic account gets a passkey or hardware key and no SMS second factor. It is now a credential that reaches the VPS. Confirm this is done rather than assuming.
 
@@ -155,7 +156,7 @@ Cover: the shape of a normal week; goals across business, health, money, career,
 
 **Done when** these hold. `verify/stage4-context.sh` covers only the mechanical part: valid provenance front matter on every file, five or fewer active goals.
 
-- [ ] You read `context/user.md` and the goal files and say it understands your situation
+- [ ] You read `me/profile.md` and the goal files and say it understands your situation
 - [ ] At least one thing there mildly surprises you: true, but not previously articulated
 - [ ] Every goal has a next action small enough to do this week
 - [ ] Your theory about why something failed is recorded as `inferred`, not `confirmed`
@@ -188,12 +189,12 @@ Cover: the shape of a normal week; goals across business, health, money, career,
 
 **Done when `verify/stage6-scheduling.sh` passes.** At minimum:
 
-- [ ] A deliberately broken run can be replayed from `runs/` with the failing step identified
-- [ ] A review of `runs/` finds no credentials, tokens or document contents
+- [ ] A deliberately broken run can be replayed from `system/runs/` with the failing step identified
+- [ ] A review of `system/runs/` finds no credentials, tokens or document contents
 - [ ] The halt flag actually stops a scheduled run
 - [ ] Backup and audit failures produce an alert; successes are silent
 
-**What good looks like.** systemd timers on the host calling into the container, invoking `bin/aios` rather than embedding prompts in unit files. Every run bounded: retries with backoff, a time budget, a loop counter, then a clean logged failure. Unattended runs get an explicit tool allowlist rather than the full surface. Structured events in logs, never payloads. Rotate `runs/` at 90 days.
+**What good looks like.** systemd timers on the host calling into the container, invoking `bin/aios` rather than embedding prompts in unit files. Every run bounded: retries with backoff, a time budget, a loop counter, then a clean logged failure. Unattended runs get an explicit tool allowlist rather than the full surface. Structured events in logs, never payloads. Rotate `system/runs/` at 90 days.
 
 **Add security monitoring here, separate from health checks.** Failed logins, new user accounts, new listening ports, unexpected processes, and large outbound transfers. That last one is what a runaway scraper or a compromised agent looks like.
 
@@ -247,7 +248,7 @@ Demonstrated, not assumed.
 
 **Nothing escalates.** Container non-root with matched UID, no socket, no host filesystem, resource-limited. Remote Control cannot read secrets or become host root. Hooks block regardless of what is approved from a phone.
 
-**Nothing leaks.** No secret inside `/data`. Secrets injected at runtime from outside the image. Logs carry events, not contents. External content quarantined and enveloped.
+**Nothing leaks.** No secret inside the data directory. Secrets injected at runtime from outside the image. Logs carry events, not contents. External content quarantined and enveloped.
 
 **Nothing is lost.** Encrypted snapshots on Drive with keys held separately and offline. A full recovery performed on a fresh VPS with `RECOVERY.md` corrected from it.
 

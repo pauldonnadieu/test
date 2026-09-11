@@ -122,69 +122,93 @@ Layers of recovery: restic on Drive is the real protection, Hetzner's own snapsh
 
 ## 5. Filesystem layout
 
-The layout is the architecture. It encodes the trust boundary, the backup boundary, and the split between raw source and compiled knowledge.
+The layout is the architecture. It encodes the trust boundary, the backup boundary, and the split between raw source and compiled knowledge. It also has to be readable by a human on a phone over SSH, which rules out a flat list of eighteen directories.
+
+Grouped by what each thing is **to you**, not by what it is to the machine.
 
 ```
-/srv/aios-data/                  host, 0700, owned by the AIOS user
-  CLAUDE.md                      operating manual, loaded every session
-  policy/
-    security.md  trust.md  autonomy.md  schemas.md  dataflow.md
-  context/
-    user.md                      who you are, values, people
-    constraints.md               time, energy, money, obligations
-    goals/                       one file per goal, five active maximum
-    patterns.md                  observed behaviour, evidence-backed
-  checkins/
-    daily/YYYY-MM-DD.md
-    weekly/YYYY-Www.md           the weekly review
-  time/YYYY-MM.jsonl             time blocks, append-only
-  energy/YYYY-MM.jsonl           energy observations, append-only
-  tasks/
-    active.md
-    done/YYYY-MM.md
-  quarantine/                    EVERYTHING from outside lands here first
-    web/  docs/  api/
-  projects/                      things you are building; see 5.1
+/srv/aios-data/
+  START-HERE.md        one screen: what everything is. Regenerated when the
+                       structure changes, so it can never go stale.
+  CLAUDE.md            the operating manual
+  decisions.md         append-only: what was decided, when, why
+
+  me/                  who I am
+    profile.md           values, people, the shape of a normal week
+    constraints.md       time, energy, money, obligations
+    goals/               one file per goal, five active maximum
+    patterns.md          observed behaviour, evidence-backed
+
+  journal/             the rhythm
+    checkins/2026-09-11.md
+    briefs/2026-09-11.md
+    reviews/2026-W37.md
+
+  tracking/            the numbers
+    time/2026-09.jsonl
+    energy/2026-09.jsonl
+    tasks.md
+    tasks-done/2026-09.md
+
+  projects/            things I am building
     <slug>/
-      README.md                  what, why, which goal it serves, state, next action
-      notes/                     working notes and decisions
-      data/                      project-owned data, including its own scrape.db
-      out/                       artefacts it produces
-  notes/                         your own captures, unattached to a project
-  wiki/                          compiled knowledge, maintained by the AIOS
-  decisions/log.md               append-only: what, when, why
-  improvement/
-    audit/YYYY-Www.md            weekly performance audit
-    research/YYYY-Www.md         weekly research digest
-    parked.md                    seen, not adopted yet, with trigger conditions
-    rejected.md                  considered and declined, with reasoning
-  runs/                          structured logs of every scheduled run
-  proposals/                     pending changes awaiting your approval
-  archives/                      superseded, never deleted
-  bin/aios                       the verb CLI
-  .claude/
-    skills/  agents/  hooks/
+      README.md          what, why, which goal it serves, state, next action
+      notes/  data/  out/
 
-/opt/aios-rebuild/               REBUILD bucket, no secrets, no personal data
-/etc/aios/secrets.env            root-owned, 0600, outside the container
-/opt/aios-verify/                the check scripts, run weekly
+  knowledge/           what it knows
+    notes/               my captures
+    wiki/                compiled, interlinked, maintained by the AIOS
+
+  untrusted/           ANYTHING FROM OUTSIDE. Named so it cannot be mistaken.
+    web/  docs/  api/
+
+  system/              the machine's own business
+    policy/              security, trust, autonomy, schemas, dataflow
+    improvement/         audits, research, parked, rejected
+    runs/                structured logs of scheduled runs
+    proposals/           pending changes awaiting approval
+    archives/            superseded, never deleted
+    bin/aios             the verb CLI
+    .claude/             skills, agents, hooks
+
+/opt/aios-rebuild/     REBUILD bucket: no secrets, no personal data
+/opt/aios-verify/      the check scripts, run weekly
+/etc/aios/secrets.env  root-owned, 0600, outside the container
 ```
 
-**Why `quarantine/` is separate from `notes/` and `wiki/`.** One directory holds anything an attacker could have written. That separation is what makes the injection defence enforceable by a hook rather than by good intentions.
+Seven directories and three files at the top. Everything you would open by hand is in the first six; `system/` is the stuff you should rarely need to look at, which is exactly why it is one entry instead of six.
 
-**Why `wiki/` is separate from the raw sources.** `quarantine/` and `scrape.db` are immutable source. `wiki/` is compiled output the system maintains. It rewrites the wiki, never the source, so every claim can be traced back to what it was compiled from. It is also what stops the same content being re-summarised forever.
+### 5.1 Navigation rules
 
-**Formats.** Markdown for prose you read. JSONL for append-only event streams, because a script and a model can both parse it. SQLite only where volume demands it.
+**`START-HERE.md` is regenerated whenever the structure changes.** A map that drifts from the territory is worse than no map. Treat it like the check scripts: it is maintained, not written once.
 
-### 5.1 Projects
+**Every directory has a `README.md` of one or two lines.** `cat knowledge/README.md` should tell you what is in there and what puts things there. The AIOS maintains these.
+
+**Dates sort naturally.** `2026-09-11`, `2026-W37`, `2026-09`. Never `11-09-26`.
+
+**One file where one file will do.** `decisions.md`, not `decisions/log.md`. `tasks.md`, not `tasks/active/current.md`. Depth costs more than length when you are navigating on a phone.
+
+**Never version by filename.** No `notes_v2.md`, no `plan_final.md`. Snapshots are the history. Filename versioning is how a directory rots, and it rots fastest when something else is doing the filing.
+
+### 5.2 Why the boundaries fall where they do
+
+**`untrusted/` is its own top-level directory with an unambiguous name.** Not `inbox/`, not `raw/`, not tucked inside `knowledge/`, because anything that sounds ordinary invites it being treated as ordinary. One directory holds everything an attacker could have written, which is what lets a hook enforce the injection defence rather than a prompt requesting it.
+
+**`knowledge/wiki/` is separate from its sources.** `untrusted/` and each project's `data/` are immutable source. The wiki is compiled output the AIOS maintains. It rewrites the wiki, never the source, so every claim traces back to what produced it, and nothing gets re-summarised forever.
+
+**`system/` groups everything the machine needs and you mostly do not.** It is still plain files you can read when you want to, but it stays out of the way of the six directories that are actually about your life.
+
+**Formats.** Markdown for prose you read. JSONL for append-only event streams, because a script and a model can both parse them and they merge without conflict. SQLite only where volume demands it.
+
+### 5.3 Projects
 
 Anything you are building lives under `projects/<slug>/`: scraping projects, the phone app, a side hustle, a renovation. Each owns its own data rather than sharing a global store, which means per-project retention, per-project isolation, and deleting a project actually deletes its data.
 
-Each `README.md` records what it is, why it exists, **which goal it serves**, current state and next action. A project that serves no goal is worth noticing rather than forbidding: it may be genuine exploration, or it may be the novelty-seeking pattern in `context/patterns.md` wearing a folder. The weekly review can see the difference; a flat directory of projects cannot.
+Each `README.md` records what it is, why it exists, **which goal it serves**, current state and next action. A project that serves no goal is worth noticing rather than forbidding: it may be genuine exploration, or it may be the novelty-seeking pattern in `me/patterns.md` wearing a folder. The weekly review can see the difference; a flat directory of projects cannot.
 
-Projects are also where the goals-versus-projects-versus-systems distinction becomes visible. A project that has been open for six months is usually a goal that needed to become a system.
+Projects are also where the goals-versus-projects-versus-systems distinction becomes visible. A project open for six months is usually a goal that needed to become a system.
 
-### 5.2 Who maintains all this
+### 5.4 Who maintains all this
 
 **The AIOS does, entirely.** You never file anything.
 
@@ -192,9 +216,7 @@ That is not a convenience, it is the point. Your own mission document puts it as
 
 So filing happens as a side effect of conversation. You mention you are worried about something and it lands in the right place with provenance. You say a goal is done and the file moves to achieved. You describe something you are building and the project folder appears with a README. You capture a thought on your phone and it is filed, and compiled into the wiki if it belongs there.
 
-The operating rules for this are in `03-OPERATING.md` §6.9. The one that matters most: **when it is unsure where something goes, it files it in the most likely place and tells you, rather than asking.** Asking where to file something is exactly the mental load the system exists to remove, and a wrong guess you can correct in one sentence is cheaper than an unfiled thought you lose.
-
----
+The operating rules are in `03-OPERATING.md` §6.9. The one that matters most: **when it is unsure where something goes, it files it in the most likely place and tells you, rather than asking.** Asking where to file something is exactly the mental load the system exists to remove, and a wrong guess you can correct in one sentence is cheaper than an unfiled thought you lose.
 
 ## 6. Interfaces
 
@@ -249,9 +271,9 @@ Maintain `policy/dataflow.md` as one row per data category: source, what process
 
 | Data | Source | Rests | To a model | Backup | Retention |
 |---|---|---|---|---|---|
-| Check-ins | You | `/data/checkins` | Excerpts only | Encrypted | Indefinite |
-| Goals, context | Intake | `/data/context` | Excerpts only | Encrypted | Indefinite |
-| Time, energy | You, CLI or app | `/data/*.jsonl` | Aggregates | Encrypted | Indefinite |
+| Check-ins | You | `journal/checkins` | Excerpts only | Encrypted | Indefinite |
+| Goals, context | Intake | `me/` | Excerpts only | Encrypted | Indefinite |
+| Time, energy | You, CLI or app | `tracking/` | Aggregates | Encrypted | Indefinite |
 | Scraped content | Web | `projects/<slug>/data/` | Yes, quarantined | Encrypted | Per project |
-| Run logs | System | `/data/runs` | No | Encrypted | 90 days |
+| Run logs | System | `system/runs` | No | Encrypted | 90 days |
 | Secrets | You | `/etc/aios` | Never | Separately encrypted | Until rotated |

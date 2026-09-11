@@ -23,6 +23,8 @@ A Hetzner VPS with no inbound port, reachable only over Tailscale. Claude Code i
 
 ## One thing worth knowing before you start
 
+The structure is built to be read. Seven directories at the top, grouped by what they are to you: `me/`, `journal/`, `tracking/`, `projects/`, `knowledge/`, `untrusted/`, and `system/` for the machine's own business. A `START-HERE.md` at the root explains the lot in one screen and is regenerated whenever anything moves.
+
 You never file anything. Every directory the system uses is maintained by the AIOS itself, as a side effect of talking to it. Mention a worry and it is filed with provenance; say a goal is finished and it moves; describe something you are building and the project folder appears. If it is unsure where something goes it guesses, tells you, and moves on rather than asking. A folder structure you have to maintain would be the second job this system was supposed to remove.
 
 ## First step
