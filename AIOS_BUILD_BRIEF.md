@@ -415,6 +415,8 @@ Do not build outbound allowlists in v1. The boundary that matters is blocking un
   proposals/                     # pending diffs awaiting user approval
   archives/                      # superseded material, never deleted
   connections.md                 # registry of reachable systems and how they auth
+  bin/
+    aios                         # the verb CLI: capture, checkin, log, brief, ask
   .claude/
     skills/                      # SKILL.md per capability
     agents/                      # subagents with isolated context
@@ -496,11 +498,53 @@ Tailscale and SSH remain, for four reasons, and none of them are optional:
 
 So Tailscale is still built in Stage 1 exactly as specified. It is no longer carrying the day-to-day interface, which means it is doing less work and is less likely to break.
 
-### 9.5 The later native app
+### 9.5 Shortcuts, voice and automation
+
+The user wants iOS Shortcuts support, and the Android equivalent, at some point. This is deferred work, but one decision has to be made now because it determines whether the later work is easy or a rewrite.
+
+**The two platforms want different transports.**
+
+- **iOS Shortcuts** has a built-in **Run Script Over SSH** action. Over Tailscale this works with no new listening service on the VPS, using the sshd that is already there. It also gives Siri voice triggering for free.
+- **Android** has no first-party equivalent. Its automation apps (HTTP Shortcuts, Tasker, MacroDroid, Automate) are built around HTTP requests. Android parity therefore means a small HTTP endpoint eventually, whatever iOS does.
+
+**So build the verbs, not the transport.** Create a CLI inside the container, `aios`, exposing a small set of commands. The SSH path invokes it directly. A future HTTP endpoint becomes a thin wrapper over the same CLI rather than a parallel implementation that drifts. This is the seam.
+
+The CLI earns its place independently of any of this: the systemd timers in Stage 6 should call `aios brief` rather than embedding `docker exec ... claude -p "..."` incantations across unit files. Build it in Stage 3 even if no shortcut ever exists.
+
+**The safe verb set.** Only these belong in a phone automation, and the constraint is not arbitrary: a shortcut credential lives on a device that can be lost, stolen or unlocked by someone else.
+
+```
+aios capture "<text>"      append to raw/notes/, timestamped
+aios checkin               the daily check-in (12.2), scriptable fields
+aios log <metric> <value>  weight, mood, energy, sleep, spend
+aios brief                 print today's brief
+aios ask "<question>"      one-shot question, answer to stdout
+```
+
+Every one of these is read-only or append-only into a quarantined location. **Never** expose through a shortcut: anything that sends a message, deletes, approves a proposal, changes configuration, touches `policy/`, or reads anything classified `sensitive` or above. `aios brief` is the only read command, and the brief must therefore never contain highly-sensitive content.
+
+**Locking down the SSH path.** The shortcut authenticates with a dedicated key that is not the user's admin key. That key is confined by a forced command in `authorized_keys`:
+
+```
+command="/usr/local/bin/aios-shortcut-wrapper",no-port-forwarding,no-agent-forwarding,no-pty,no-X11-forwarding ssh-ed25519 AAAA... aios-shortcut-iphone
+```
+
+The wrapper reads `SSH_ORIGINAL_COMMAND`, validates it against an allowlist of the verbs above, rejects everything else, and logs every invocation to `runs/`. A stolen phone then yields the ability to append notes and read a brief, not shell access. One key per device, named, so a lost phone is revoked by deleting one line.
+
+**If and when the HTTP path is built.** Bind to the Tailscale interface only, never `0.0.0.0`. Same allowlisted verbs, no more. A bearer token per device, revocable individually, stored in `/etc/aios/` and never in `/srv/aios-data/`. This reintroduces a listening service, which is a real cost (9.3), so build it only when Android is actually in use, and keep it to the verb set.
+
+**Practical notes.**
+
+- Tailscale must be connected on the phone for any of this to work. Enable always-on VPN on the handset, or the shortcut fails silently at the moment of capture, which is the moment it matters.
+- Voice capture is the highest-value shortcut by a distance. Capture friction is what kills personal knowledge systems, and the user commutes. "Hey Siri, capture" into `raw/notes/` is probably worth more than the rest of the shortcut surface combined.
+- Content arriving by shortcut is user-authored, so `trust: confirmed`, but voice transcription is lossy. Mark it `source: shortcut-capture` so the wiki lint can treat transcription artefacts sceptically rather than compiling them as fact.
+- The daily check-in (12.2) is the natural second shortcut. A thirty-second ritual that requires opening an app and finding a screen becomes a ritual that stops happening.
+
+### 9.6 The later native app
 
 If the user still wants a bespoke app after living with this, that is a Stage 9+ decision made with real usage data about what is actually missing. Building it in v1 would be solving a problem that has not been demonstrated.
 
-### 9.6 What Remote Control is not
+### 9.7 What Remote Control is not
 
 It is the human interface, not the automation runtime. Scheduled work (daily brief generation, weekly review, audit, backups) runs headlessly via systemd timers into the container, as specified in Stage 6, and has nothing to do with Remote Control. Keep the two clearly separate: one is how the user talks to the system, the other is how the system runs when nobody is watching.
 
@@ -558,12 +602,13 @@ This is where the system becomes usable, and it comes before connections deliber
 2. Write `CLAUDE.md`. Contents: the persona (Section 11), the principles from Section 4 by reference, the trust ladder, the untrusted-content rule, the autonomy ladder, the tool registry, and the operating rituals. Keep it tight. It is loaded on every run, so every line costs context on every request.
 3. Write `policy/security.md`, `policy/trust.md` and `policy/autonomy.md` from Sections 5, 6 and 13.
 4. Build the hooks: PreToolUse guards on destructive commands, the untrusted-content write guard (5.6), and an audit-logging hook writing to `runs/`.
-5. Lock down the Anthropic account before enabling Remote Control: passkey or hardware security key, no SMS second factor, unique password in the password manager. This is now a credential that reaches the VPS (5.8), so treat it accordingly. **STOP** and confirm with the user that this is done.
-6. Start Remote Control inside the container per 9.2: under tmux, in server mode, in `/data`, default permission mode, `--sandbox` on, capacity constrained. Connect from the iPhone via the QR code.
-7. Verify the container boundary holds from a Remote Control session: it cannot read `/etc/aios/secrets.env`, cannot reach the Docker socket, cannot escalate to host root, and cannot write to `policy/` or `.claude/` when the hook conditions apply.
-8. Build the kill switch (Section 14), including `disableRemoteControl`, and test all layers before any scheduled run exists.
+5. Build the `aios` CLI (9.5). Scheduled runs and any future phone automation both go through it, so it is the seam, not a convenience. Keep the verb set small and every verb read-only or append-only.
+6. Lock down the Anthropic account before enabling Remote Control: passkey or hardware security key, no SMS second factor, unique password in the password manager. This is now a credential that reaches the VPS (5.8), so treat it accordingly. **STOP** and confirm with the user that this is done.
+7. Start Remote Control inside the container per 9.2: under tmux, in server mode, in `/data`, default permission mode, `--sandbox` on, capacity constrained. Connect from the iPhone via the QR code.
+8. Verify the container boundary holds from a Remote Control session: it cannot read `/etc/aios/secrets.env`, cannot reach the Docker socket, cannot escalate to host root, and cannot write to `policy/` or `.claude/` when the hook conditions apply.
+9. Build the kill switch (Section 14), including `disableRemoteControl`, and test all layers before any scheduled run exists.
 
-*Acceptance:* the user holds a conversation with the AIOS from the Claude iOS app, and a tool call requiring approval prompts on the phone and is correctly refused when denied. The container boundary checks in step 7 all pass. The kill switch stops everything and has been demonstrated. No inbound port is open on the VPS, verified by external scan.
+*Acceptance:* the user holds a conversation with the AIOS from the Claude iOS app, and a tool call requiring approval prompts on the phone and is correctly refused when denied. The container boundary checks in step 8 all pass. The kill switch stops everything and has been demonstrated. No inbound port is open on the VPS, verified by external scan.
 
 ---
 
@@ -609,7 +654,7 @@ Run all of these manually for at least a week before scheduling anything (P4). I
 
 **STOP.** Ask Q4 first. See Section 16.
 
-1. systemd timers on the host calling `docker exec` into the container. Not cron in the container. Timers give you logging, dependency ordering and failure handling for free.
+1. systemd timers on the host calling `docker exec` into the container, invoking the `aios` CLI (9.5) rather than embedding prompts in unit files. Not cron in the container. Timers give you logging, dependency ordering and failure handling for free.
 2. Every scheduled run: bounded retries with exponential backoff, a hard time budget, a loop counter, and a clean logged failure if it exhausts them. Never a silent failure.
 3. Every run writes a structured record to `runs/`: what triggered it, what tools were called, what succeeded, what failed, what it produced.
 4. The `/audit` skill, weekly: are connections alive, are any skills broken, is anything failing repeatedly, does the wiki lint clean, are backups current, is disk space fine.
@@ -646,6 +691,18 @@ This stage is not optional and it is not "later". Until it passes, the system is
 Only now. See Section 15.
 
 *Acceptance:* the system proposes a change to its own configuration that the user accepts on its merits, having judged it a genuinely good idea rather than accepting it to be agreeable.
+
+---
+
+### Stage 9 and beyond: phone automation
+
+Deferred deliberately. Build only once the system has been in real daily use for a month, so the shortcuts are built around rituals that actually happen rather than rituals that were planned.
+
+1. **iOS Shortcuts over SSH** (9.5). Dedicated restricted key, forced command, allowlist wrapper, one key per device. Start with voice capture and the daily check-in.
+2. **Android**, if wanted. The small HTTP endpoint on the Tailscale interface, same verb set, per-device revocable tokens.
+3. **A native app**, only if a month of real use shows something specific the Claude app and the shortcuts cannot do (9.6).
+
+*Acceptance for each:* a stolen-phone test. Take the device credential, attempt every verb outside the allowlist, and confirm each is refused and logged.
 
 ---
 
@@ -1017,6 +1074,8 @@ The build is not complete until every line is true and has been demonstrated, no
 
 **Interface and use**
 
+- [ ] `aios` CLI built, verb set small, every verb read-only or append-only
+- [ ] Scheduled runs invoke the CLI rather than embedding prompts in unit files
 - [ ] Conversation works from the Claude iOS app, with a permission prompt correctly approved and correctly denied
 - [ ] External port scan still shows nothing open
 - [ ] SSH fallback still works and is documented
@@ -1077,6 +1136,8 @@ The cost is real and is documented rather than glossed: session transcripts are 
 **19.15 Added goal-overload enforcement.** The mission document identified goal overload as a failure mode and proposed no mechanism. A hard cap of five active goals with explicit modes (12.7) is the mechanism.
 
 **19.16 Put backup and recovery before the clever parts.** The original staging left backups late. A system holding this much irreplaceable personal context should not run for a week without a tested restore. Stage 7 comes before Stage 8, and its acceptance test is an actual rebuild on an actual fresh VPS.
+
+**19.17 Added the verb CLI as the automation seam.** The user wants iOS Shortcuts, and the Android equivalent, later. iOS Shortcuts can run a script over SSH, which needs no listening service; Android's automation apps are HTTP-shaped, which eventually does. Rather than pick a transport now or build both, Section 9.5 specifies a small `aios` CLI that both wrap. It is built in Stage 3 because the scheduled runs in Stage 6 should call it anyway, which means the seam costs nothing extra and the later shortcut work is configuration rather than a rewrite. The verb set is constrained to read-only and append-only operations, and the SSH key is confined by a forced command, so that a lost phone yields note capture rather than shell access.
 
 ---
 
