@@ -423,3 +423,13 @@ Smaller changes, all from the same guidance: one session per stage, because cont
 Two existing decisions the guidance independently supports, now with the reasoning recorded rather than asserted: the `aios` CLI, because CLI tools are the most context-efficient way to reach anything external and a command cannot drift from its own implementation the way a page of conventions can; and enforcement living in hooks rather than prompts, because hooks are deterministic while instructions are advisory.
 
 Karpathy's current position points the same way. His shift from vibe coding to what he calls agentic engineering is about the human writing rigorous specifications and guardrails and then verifying output at the scale being delegated, rather than accepting generated work. His line that you remain responsible for your software regardless is the same argument as this system's autonomy ladder and its refusal to let self-improvement become self-authorisation.
+
+**9.22 Made the loop executable rather than described.** A final pass against the Claude Code documentation for `/goal`, Stop hooks and skills turned up three things the previous version described but did not provide.
+
+The scoring harness now exists rather than being specified: `verify/lib.sh`, `verify/CONTRACT.md`, a worked `verify/stage1-host.sh`, and `verify/all.sh`. Binary pass/fail was the weaker design. A score gives the loop a gradient to work against, where two consecutive failures give it nothing, and a printed score line survives into the transcript where a silent exit code does not. A skip counts as a failure, because an unrun check is an unknown.
+
+Each stage now carries a literal `/goal` condition, copy-paste ready. This matters more than it looks: the evaluator does not run commands and does not read files, so it can only judge what the agent has already surfaced in the conversation. A condition phrased as a property of the machine cannot be evaluated at all; one phrased as a printed score can. Each condition also carries a turn bound and an explicit instruction not to modify a check to satisfy it.
+
+A repo-level `CLAUDE.md` and a `/stage N` skill were added so a fresh session opens already knowing the read order, the one-stage-per-session rule, the scoring contract and the five invariants, rather than needing to be told. Without that, the guidance only applied if the user remembered to point at it.
+
+The strongest available form of the loop is recorded but left to the user: once `verify/all.sh` exists, a Stop hook running it prevents a turn from ending while any check fails, with no model judgement involved.

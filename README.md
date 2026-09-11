@@ -30,10 +30,16 @@ They are written as goals and definitions of done rather than as instructions. C
 | [reference/SCHEMAS.md](reference/SCHEMAS.md) | `/srv/aios-data/policy/schemas.md` |
 | [reference/RECOVERY.template.md](reference/RECOVERY.template.md) | `/opt/aios-rebuild/RECOVERY.md`, completed in Stage 7 |
 
+**The loop.** Give it a goal, get out of the way, tell it when it is done, score it objectively. In practice: `/stage N` loads the stage, `BUILD.md` carries a ready-made `/goal` condition for it, and `verify/stageN-*.sh` prints the score that decides whether it is done.
+
+| Directory | Purpose |
+|---|---|
+| [verify/](verify/CONTRACT.md) | The scoring harness. `lib.sh`, the output contract, a worked example, and `all.sh`. Becomes the security regression suite after the build. |
+
 ## Read order
 
 1. `docs/ARCHITECTURE.md` for the shape and why it is that shape.
-2. `docs/WORKING.md` once, then `docs/BUILD.md`, working the stages in order. Each stage ships an executable check under `verify/`; do not skip one and do not weaken one to make it pass.
+2. `docs/WORKING.md` once, then `docs/BUILD.md`, one stage per session via `/stage N`. Each stage ships an executable check under `verify/`; never weaken one to make it pass.
 3. `docs/EXTENSIONS.md` only once the core has run for a month in real daily use.
 
 If a decision in these documents looks wrong once you are building against reality, say so. They were written without knowing what the build would turn up.

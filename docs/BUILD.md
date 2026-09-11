@@ -48,6 +48,12 @@ Goals, in order, with a definition of done for each. Read `ARCHITECTURE.md` firs
 
 **Why this order.** Everything else runs on this. Hardening a machine that already holds personal data is worse than hardening an empty one.
 
+**Goal condition.** Paste into `/goal`, ideally in auto mode so the turns proceed unattended:
+
+```
+verify/stage1-host.sh has been executed on the VPS in this conversation and its output shows every check passing, with no FAILED and no SKIPPED line. The external scan check must have run from a different machine, not been skipped. Do not modify or remove a check to reach this state; if a check cannot pass, stop and report which and why. Stop after 30 turns and report what remains.
+```
+
 **Done when** `verify/stage1-host.sh` passes. At minimum it checks:
 
 - [ ] An external port scan finds nothing open
@@ -74,6 +80,12 @@ Goals, in order, with a definition of done for each. Read `ARCHITECTURE.md` firs
 ## Stage 2: A disposable container holding durable data
 
 **Goal.** Claude Code runs in a container that can be destroyed and rebuilt from source at any time, while everything personal survives on the host. A compromise of the container reaches `/data` and nothing else.
+
+**Goal condition.** Paste into `/goal`, ideally in auto mode so the turns proceed unattended:
+
+```
+verify/stage2-container.sh has been executed in this conversation and its output shows every check passing, with no FAILED and no SKIPPED line, and it includes negative checks proving that from inside the container the Docker socket is unreachable, /etc/aios/secrets.env is unreadable, and host root cannot be reached. A container rebuild has been performed in this conversation with the data intact afterwards. Do not weaken a check to reach this state. Stop after 30 turns and report what remains.
+```
 
 **Done when** `verify/stage2-container.sh` passes. At minimum it checks:
 
@@ -102,6 +114,12 @@ Mismatched UIDs between the container user and the host directory owner is the m
 **Goal.** The AIOS exists as a working system with its operating instructions in place, reachable from the Claude iOS app, with every control that is supposed to stop it actually stopping it.
 
 **Why this order.** Before connections and before scheduling, because a system that cannot be used cannot be evaluated, and a system that cannot be stopped should not be scheduled.
+
+**Goal condition.** Paste into `/goal`, ideally in auto mode so the turns proceed unattended:
+
+```
+verify/stage3-core.sh has been executed in this conversation and its output shows every check passing, with no FAILED and no SKIPPED line, including negative checks proving a hook blocks a write to policy/ after a read from raw/untrusted/, and that a Remote Control session cannot read the secrets file. The four kill switch layers have each been exercised in this conversation with their output shown. Two things remain for the user to confirm and are not part of this condition: a conversation from the Claude iOS app, and an approval prompt honoured and refused. Stop after 40 turns and report what remains.
+```
 
 **Done when** `verify/stage3-core.sh` passes, plus the two things no script can check: the user holds a conversation with the AIOS from the Claude iOS app, and a tool call requiring approval prompts on the phone, executes when approved and is refused when denied.
 
@@ -171,6 +189,12 @@ Then read it back and let them correct it. Log the corrections.
 
 **Why this order.** Automating a ritual that does not work manually just makes it fail on a schedule. The week of manual use is where you find out the check-in is too long or the brief says nothing useful.
 
+**Goal condition.** Paste into `/goal`, ideally in auto mode so the turns proceed unattended:
+
+```
+verify/stage5-rituals.sh has been executed in this conversation and its output shows seven consecutive daily check-in files, at least seven days of time block entries, and one weekly review file present and parseable. Whether the review was any good is the user's call, not this condition's. Stop after 15 turns and report what remains.
+```
+
 **Done when** `verify/stage5-rituals.sh` passes, which checks that the data exists rather than that it is any good, plus the last item, which only the user can answer:
 
 - [ ] Seven consecutive daily check-ins recorded
@@ -192,6 +216,12 @@ Then read it back and let them correct it. Log the corrections.
 ## Stage 6: Work that happens without being watched
 
 **Goal.** The rituals run on a schedule, failures are visible rather than silent, and any failed run can be reconstructed afterwards.
+
+**Goal condition.** Paste into `/goal`, ideally in auto mode so the turns proceed unattended:
+
+```
+verify/stage6-scheduling.sh has been executed in this conversation and its output shows every check passing with no FAILED and no SKIPPED line, including a deliberately failed run that was replayed from runs/ with the failing tool call identified, and a check that no credential or document content appears in runs/. Stop after 25 turns and report what remains.
+```
 
 **Done when** `verify/stage6-scheduling.sh` passes. At minimum it checks:
 
@@ -218,6 +248,12 @@ Then read it back and let them correct it. Log the corrections.
 **Goal.** The entire system can be rebuilt from Google Drive plus the password manager, by someone who no longer has the original VPS, and this has been proven rather than assumed.
 
 **Why this is not last.** A system holding this much irreplaceable personal context should not run for a week without a tested restore.
+
+**Goal condition.** Paste into `/goal`, ideally in auto mode so the turns proceed unattended:
+
+```
+verify/stage7-recovery.sh has been executed on a freshly rebuilt throwaway VPS in this conversation and its output shows every check passing with no FAILED and no SKIPPED line, the rebuild was performed by following RECOVERY.md without improvising, every step that was missing or wrong has been corrected in RECOVERY.md, and the restored system answered a question using restored personal context. Stop after 40 turns and report what remains.
+```
 
 **Done when** `verify/stage7-recovery.sh` passes on the rebuilt machine, and:
 

@@ -6,22 +6,38 @@ The recommendations here follow Anthropic's published guidance on Claude Code ([
 
 ---
 
-## 1. The one thing that matters most
+## 1. The loop
+
+Give it a goal. Get out of the way. Tell it when it is done. Score it objectively.
+
+Everything below is machinery for those four things. In Claude Code they map onto specific features, so the build uses them rather than approximating them in prose.
+
+| | Mechanism |
+|---|---|
+| Give it a goal | `/goal <condition>`, one per session. The condition itself starts the first turn. |
+| Get out of the way | Auto mode, so goal turns run without per-tool prompts. |
+| Tell it when it is done | The condition names a printed score. The evaluator checks after every turn. |
+| Score it objectively | `verify/stageN-*.sh` prints `SCORE p/t` and exits 0 only when everything passed. |
+
+**The detail that decides whether this works.** The `/goal` evaluator does not run commands and does not read files. It judges only what has been surfaced in the conversation. So a condition like "the host is hardened" cannot be evaluated, and "verify/stage1-host.sh exits 0" can only be evaluated if the run and its output are actually in the transcript.
+
+Write conditions that name something the agent's own output demonstrates. `BUILD.md` carries a ready-made condition for each stage, phrased for this constraint. They also each carry a turn bound, because a loop with no bound either finishes or wastes a day.
+
+Two failure modes to know about. If the agent answers the evaluator repeatedly without using tools, Claude Code stops the loop and hands control back with the goal still set. And an unrecoverable error, such as an auth failure or a context overflow compaction could not clear, clears the goal outright and needs it set again.
+
+**Where a Stop hook is better than `/goal`.** `/goal` is session-scoped and model-evaluated. A Stop hook lives in settings, applies to every session in scope, and can run a script for a deterministic check. Once `verify/all.sh` exists, a Stop hook running it is the strongest form of the loop: the turn cannot end while a check is failing, and no model judgement is involved. Claude Code overrides the hook after eight consecutive blocks, so it is a strong gate rather than an infinite one.
+
+---
+
+## 2. Why the score is the foundation
 
 > Claude stops when the work looks done. Without a check it can run, "looks done" is the only signal available, and you become the verification loop.
 
-So every stage of this build ships a script that returns pass or fail. Not a checklist a human reads. An executable check the agent can run, read the output of, and iterate against until it passes.
+So every stage ships a script that scores itself. Not a checklist a human reads. An executable check the agent runs, reads the output of, and iterates against.
 
-```
-verify/
-  stage1-host.sh
-  stage2-container.sh
-  stage3-core.sh
-  stage5-rituals.sh
-  stage6-scheduling.sh
-  stage7-recovery.sh
-  all.sh            runs every script that applies
-```
+The harness exists: `verify/lib.sh` provides `check`, `skip` and `summary`; `verify/CONTRACT.md` is the output format and the rules; `verify/stage1-host.sh` is a worked example including the shape that matters most, a negative check that plants a fake secret and asserts the commit fails. `verify/all.sh` runs everything and prints a total.
+
+A skip is not a pass. An unrun check is an unknown, and `summary` exits non-zero on a skip for that reason. The Stage 1 example ships with the external-scan check skipped by design, because a host cannot honestly scan itself; it passes only once the scan has been run from elsewhere.
 
 **These are not build scaffolding.** They are the security regression suite. Every property that matters (nothing listening, no secret in `/data`, container cannot reach host root, hooks block what they claim to block) is a thing that can silently stop being true after an unrelated change six months later. A script that checks it is how you find out. `verify/all.sh` becomes part of the weekly audit in Stage 6 and stays for the life of the system.
 
@@ -37,7 +53,7 @@ Three ways to make the check bind harder, in ascending order of setup cost:
 
 ---
 
-## 2. One session per stage
+## 3. One session per stage
 
 Context is the binding constraint, and performance degrades as it fills. Eight stages in one session would spend most of its budget on history from stages already finished.
 
@@ -50,7 +66,7 @@ Context is the binding constraint, and performance degrades as it fills. Eight s
 
 ---
 
-## 3. Explore, plan, then build
+## 4. Explore, plan, then build
 
 Worth the overhead on the stages where getting the approach wrong is expensive:
 
@@ -65,7 +81,7 @@ Use plan mode (`Shift+Tab`, or `claude --permission-mode plan`) for the explorat
 
 ---
 
-## 4. Stage 4 is an interview, and there is a documented pattern for it
+## 5. Stage 4 is an interview, and there is a documented pattern for it
 
 The intake is the highest-leverage hour in the build, and Anthropic's own advice for large features maps onto it directly: have Claude interview the user before writing anything.
 
@@ -75,7 +91,7 @@ What makes the output good is the same thing that makes a good spec: it is self-
 
 ---
 
-## 5. Let something else grade the work
+## 6. Let something else grade the work
 
 For anything where the agent that built it is not the right judge of it, use a subagent in a fresh context. It sees the result and the criteria, not the reasoning that produced them.
 
@@ -89,7 +105,7 @@ Tell the reviewer to report only gaps that affect correctness or a stated requir
 
 ---
 
-## 6. Keep research out of the main context
+## 7. Keep research out of the main context
 
 Investigations read a lot and most of what they read is not needed afterwards. Delegate them to subagents, which report back a summary and keep their file reads out of the main window.
 
@@ -97,7 +113,7 @@ Scope investigations. "Investigate X" with no boundary reads hundreds of files a
 
 ---
 
-## 7. Prefer a CLI over prose, and a hook over a rule
+## 8. Prefer a CLI over prose, and a hook over a rule
 
 Two patterns from the guidance that shape this build's design rather than just its process.
 
@@ -107,7 +123,7 @@ Two patterns from the guidance that shape this build's design rather than just i
 
 ---
 
-## 8. Keep CLAUDE.md short, and use skills for the rest
+## 9. Keep CLAUDE.md short, and use skills for the rest
 
 CLAUDE.md loads on every session. The test for every line is: **would removing this cause a mistake?** If not, cut it. A bloated CLAUDE.md is not a thorough one; it is one where the important rules get lost among the unimportant ones.
 
@@ -119,7 +135,7 @@ Detail that is only relevant sometimes belongs in a **skill**, which loads on de
 
 ---
 
-## 9. Scope tools on unattended runs
+## 10. Scope tools on unattended runs
 
 Scheduled runs (Stage 6) execute with nobody watching. Restrict them to the tools they need rather than running with everything available, and prefer `claude -p` with an explicit tool allowlist. A run that only needs to read `checkins/` and write one file should not be able to do more than that.
 
@@ -127,7 +143,7 @@ This is defence in depth against the agent doing something unexpected, not a sta
 
 ---
 
-## 10. Delegate, don't dictate
+## 11. Delegate, don't dictate
 
 The documentation's own framing, and the reason `BUILD.md` is written as goals rather than steps:
 
@@ -143,17 +159,17 @@ Corollaries worth stating, because they cut both ways:
 
 ---
 
-## 11. Karpathy, for the same reason
+## 12. Karpathy, for the same reason
 
 Karpathy's current framing points the same way as the guidance above. His move away from what he called vibe coding is towards the human writing rigorous specifications, defining architecture and guardrails, and then verifying output at the scale being delegated, rather than reading generated code and accepting it because it looks plausible. His position that you remain responsible for your software regardless of how it was produced is the same argument as this system's autonomy ladder.
 
-The practical consequence for this build is the one already stated in Section 1: the bottleneck is not how much an agent can produce, it is how much of that output can be verified. Everything in `verify/` exists to move that limit.
+The practical consequence for this build is the one already stated at the top: the bottleneck is not how much an agent can produce, it is how much of that output can be verified. Everything in `verify/` exists to move that limit.
 
 Sources worth reading directly rather than through summaries: [Claude Code best practices](https://code.claude.com/docs/en/best-practices), [How Claude Code works](https://code.claude.com/docs/en/how-claude-code-works), and Karpathy's own writing rather than the considerable volume of secondary commentary on it.
 
 ---
 
-## 12. What this document does not do
+## 13. What this document does not do
 
 It does not tell the agent which tools to call, what order to read files in, or how to configure a firewall. That is what it is for, and dictating it produces worse results than describing the outcome and letting it work.
 
