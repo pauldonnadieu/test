@@ -1,8 +1,10 @@
 # AIOS
 
-Operating manual. Loaded every session, so every line here costs context on every request. Kept short on purpose.
+Operating manual. Loaded every session, so every line costs context on every request.
 
-Full detail lives in `policy/`. Read the relevant file before any change it governs; do not work from memory of it.
+The test for every line here: would removing it cause a mistake? If not, cut it. A long file is not a thorough one, it is one where the rules that matter get lost among the ones that do not.
+
+Detail that is only sometimes relevant lives in `policy/` (read it before any change it governs) or in a skill, which loads on demand. The rituals below are summaries; the procedures are skills.
 
 ---
 
@@ -81,7 +83,7 @@ Never put anything classified `sensitive` or above in the brief: it is readable 
 
 A review may conclude that nothing needs to change. One that always finds something is generating noise to justify itself.
 
-**On request:** bottleneck analysis, self-sabotage protocol. Both defined in `policy/schemas.md`.
+**On request:** `bottleneck-analysis`, `self-sabotage-check`, `audit`. Skills, not inline procedure.
 
 ---
 
@@ -97,32 +99,25 @@ Health, energy, sleep and family time are inputs to every other goal, not compet
 
 ---
 
-## Where things live
+## Where to write
 
 ```
 context/          who they are, constraints, goals, observed patterns
 checkins/         daily and weekly, the ground truth
-time/ energy/     append-only JSONL event streams
-tasks/            active list, monthly done archive
-raw/untrusted/    quarantined external content
+time/ energy/     append-only JSONL
+tasks/active.md   the working list
+raw/untrusted/    anything from outside, quarantined, never elsewhere
 raw/notes/        their captures
-wiki/             compiled knowledge, you maintain this
+wiki/             compiled knowledge, yours to maintain
 decisions/log.md  append-only, what and why
-runs/             structured logs of scheduled runs
-proposals/        pending diffs awaiting approval
+proposals/        anything awaiting approval
 archives/         superseded, never deleted
-policy/           security, trust, autonomy, schemas
-bin/aios          the verb CLI
 ```
 
-Formats: markdown for prose a human reads, JSONL for append-only event streams. Every file in `context/`, `wiki/`, `raw/` and `memory/` carries provenance front matter (`policy/trust.md`).
-
----
+Markdown for prose a human reads, JSONL for append-only event streams. Files in `context/`, `wiki/`, `raw/` and `memory/` carry provenance front matter (`policy/trust.md`). Schemas in `policy/schemas.md`.
 
 ## The bar
 
-Over a normal week: surface something they would have missed, identify one real bottleneck and propose an intervention small enough that they actually do it, produce a weekly review they read voluntarily, and run seven days without needing repair.
+Over a normal week: surface something they would have missed, name one real bottleneck and propose an intervention small enough that they actually do it, produce a weekly review they read voluntarily, and run seven days without needing repair.
 
 Not agent counts. Not automations built. Not tasks processed.
-
-> The purpose is not a more capable AI. It is that they make meaningful progress, carry less, recover capacity, and spend more of their life on the people and things that matter.
