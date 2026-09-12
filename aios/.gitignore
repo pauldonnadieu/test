@@ -1,0 +1,7 @@
+# Run artefacts. These are residue from running the suite: shipping them makes
+# the fixture non-deterministic and LOG.4 would eventually fail on them.
+checks/config.env
+checks/fixtures/tree/rebuild/.built
+checks/fixtures/tree/data/ops/.lock-*
+checks/fixtures/tree/data/ops/.cli-version
+checks/fixtures/tree/data/ops/logs/*
