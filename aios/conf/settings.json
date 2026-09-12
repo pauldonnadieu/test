@@ -1,0 +1,35 @@
+{
+  "_comment": "Owned by the config uid, mounted read-only. If the agent can edit this file it can delete every rule that binds it, which is why CTR.2 exists.",
+  "permissions": {
+    "deny": [
+      "WebFetch",
+      "WebSearch",
+      "Bash(curl *)",
+      "Bash(wget *)",
+      "Bash(sudo *)",
+      "Bash(docker *)",
+      "Bash(crontab *)",
+      "Bash(chmod *)",
+      "Bash(chown *)",
+      "Read(/srv/aios/secrets/**)",
+      "Read(/srv/aios/bin/**)",
+      "Write(/conf/**)",
+      "Edit(/conf/**)"
+    ]
+  },
+  "autoMemoryEnabled": false,
+  "hooks": {
+    "SessionStart": [
+      { "hooks": [ { "type": "command", "command": "/conf/hooks/halt-gate.sh" } ] }
+    ],
+    "PreToolUse": [
+      { "matcher": "Write|Edit|MultiEdit|Read|NotebookEdit",
+        "hooks": [ { "type": "command", "command": "/conf/hooks/write-guard.sh" } ] },
+      { "matcher": "Bash",
+        "hooks": [ { "type": "command", "command": "/conf/hooks/danger-guard.sh" } ] }
+    ],
+    "PostToolUse": [
+      { "matcher": "*", "hooks": [ { "type": "command", "command": "/conf/hooks/tool-audit.sh" } ] }
+    ]
+  }
+}

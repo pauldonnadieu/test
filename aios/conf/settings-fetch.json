@@ -1,0 +1,25 @@
+{
+  "_comment": "The ONE legitimate --settings exception, declared in checks/settings-exceptions.txt. Holds exactly one dangerous capability: it can reach the internet and cannot see your data. The summariser holds the other half and neither ever holds both.",
+  "permissions": {
+    "deny": [
+      "Bash",
+      "Read(/data/goals/**)",
+      "Read(/data/daily/**)",
+      "Read(/data/review/**)",
+      "Read(/data/reference/**)",
+      "Read(/data/ops/**)",
+      "Read(/data/utility/**)",
+      "Read(/srv/aios/secrets/**)",
+      "Write(/data/goals/**)",
+      "Write(/data/daily/**)",
+      "Write(/data/review/**)",
+      "Write(/data/reference/**)",
+      "Write(/data/ops/**)"
+    ]
+  },
+  "autoMemoryEnabled": false,
+  "hooks": {
+    "SessionStart": [ { "hooks": [ { "type": "command", "command": "/conf/hooks/halt-gate.sh" } ] } ],
+    "PostToolUse": [ { "matcher": "*", "hooks": [ { "type": "command", "command": "/conf/hooks/tool-audit.sh" } ] } ]
+  }
+}

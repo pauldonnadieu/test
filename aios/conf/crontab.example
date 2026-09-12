@@ -1,0 +1,28 @@
+# AIOS schedule. Local time, which stage 1 set with timedatectl. A fresh Hetzner
+# box is UTC, and every time below would then be wrong by hours with nothing
+# about the result looking like a bug.
+#
+# PATH matters: cron runs with a minimal PATH and no login shell, so a script
+# that works by hand fails at 3am with "docker: not found". Every script sets it
+# too, and CRON.2 checks that.
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+SHELL=/bin/bash
+MAILTO=""
+
+# Evening, daily. The foundation.
+30 20 * * *   /srv/aios/bin/checkin-prompt.sh    >> /srv/aios/data/ops/logs/cron.log 2>&1
+
+# Nightly, no model calls at all.
+15 2  * * *   /srv/aios/bin/backup.sh            >> /srv/aios/data/ops/logs/cron.log 2>&1
+45 2  * * *   /srv/aios/bin/change-ledger.sh     >> /srv/aios/data/ops/logs/cron.log 2>&1
+0  3  * * *   /srv/aios/bin/security-observe.sh  >> /srv/aios/data/ops/logs/cron.log 2>&1
+20 3  * * *   /srv/aios/bin/sweep.sh             >> /srv/aios/data/ops/logs/cron.log 2>&1
+
+# Sunday. The review first, then the audit, because the audit gives the research a target.
+0  19 * * 0   /srv/aios/bin/weekly-review.sh     >> /srv/aios/data/ops/logs/cron.log 2>&1
+30 20 * * 0   /srv/aios/bin/audit-scan.sh        >> /srv/aios/data/ops/logs/cron.log 2>&1
+0  22 * * 0   /srv/aios/bin/health-check.sh      >> /srv/aios/data/ops/logs/cron.log 2>&1
+
+# Weekly prune is separate from the nightly backup because Google Drive throttles
+# and a large forget+prune can fail part-way on consumer storage.
+0  4  * * 1   /srv/aios/bin/backup.sh prune      >> /srv/aios/data/ops/logs/cron.log 2>&1

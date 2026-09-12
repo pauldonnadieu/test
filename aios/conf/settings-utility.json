@@ -1,0 +1,29 @@
+{
+  "_comment": "The free-tier lane. Invoked by bin/utility-router.sh, which runs ON THE HOST so the container never holds the credential. AIOS_LANE=utility makes write-guard confine every read and write to utility/ and untrusted-external/. Nothing from goals/, daily/, review/, reference/ or ops/ is reachable, and that is a path rule rather than a judgement about sensitivity.",
+  "permissions": {
+    "deny": [
+      "Bash",
+      "Read(/data/goals/**)",
+      "Read(/data/daily/**)",
+      "Read(/data/review/**)",
+      "Read(/data/reference/**)",
+      "Read(/data/ops/**)",
+      "Read(/srv/aios/secrets/**)",
+      "Read(/srv/aios/conf/**)",
+      "Write(/data/goals/**)",
+      "Write(/data/daily/**)",
+      "Write(/data/review/**)",
+      "Write(/data/reference/**)",
+      "Write(/data/ops/**)"
+    ]
+  },
+  "autoMemoryEnabled": false,
+  "hooks": {
+    "SessionStart": [ { "hooks": [ { "type": "command", "command": "/conf/hooks/halt-gate.sh" } ] } ],
+    "PreToolUse": [
+      { "matcher": "Write|Edit|Read",
+        "hooks": [ { "type": "command", "command": "/conf/hooks/write-guard.sh" } ] }
+    ],
+    "PostToolUse": [ { "matcher": "*", "hooks": [ { "type": "command", "command": "/conf/hooks/tool-audit.sh" } ] } ]
+  }
+}

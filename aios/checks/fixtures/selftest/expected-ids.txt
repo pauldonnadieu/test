@@ -1,0 +1,6 @@
+SELF.1	stage-99-fixture	health
+SELF.2	stage-99-fixture	health
+SELF.3	stage-99-fixture	health
+SELF.4	stage-99-fixture	health
+SELF.5	stage-99-fixture	health
+SELF.6	stage-99-fixture	signal

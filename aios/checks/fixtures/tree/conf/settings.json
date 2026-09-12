@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "deny": [
+      "WebFetch",
+      "Bash(curl *)",
+      "Bash(wget *)",
+      "Bash(sudo *)",
+      "Bash(docker *)",
+      "Bash(crontab *)",
+      "Read(/srv/aios/secrets/**)"
+    ]
+  },
+  "autoMemoryEnabled": false,
+  "hooks": {
+    "SessionStart": [{"hooks": [{"type": "command", "command": "/conf/hooks/halt-gate.sh"}]}],
+    "PreToolUse": [
+      {"matcher": "Write|Edit|Read", "hooks": [{"type": "command", "command": "/conf/hooks/write-guard.sh"}]},
+      {"matcher": "Bash", "hooks": [{"type": "command", "command": "/conf/hooks/danger-guard.sh"}]}
+    ],
+    "PostToolUse": [{"matcher": "*", "hooks": [{"type": "command", "command": "/conf/hooks/tool-audit.sh"}]}]
+  }
+}
