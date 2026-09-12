@@ -62,7 +62,7 @@ life over time, and the lane is opt-in per item rather than a default destinatio
 ### Currency, properly
 
 v4 gave "staying on the cutting edge" one skill and five bullets, despite it being a stated
-purpose. `R4-currency.md` rebuilds it: three questions in priority order, a tiered watchlist with
+purpose. `reference/R4-currency.md` rebuilds it: three questions in priority order, a tiered watchlist with
 an explicit do-not-ingest list and an annual verification of the list itself, source grading, and
 **a separate seven-step procedure for evaluating a runtime capability**, which is a different act
 from adopting a tool and the one most likely to produce real improvement. Three standing triggers
@@ -70,13 +70,13 @@ are written down so the scan recognises them rather than re-evaluating monthly.
 
 ### The long arc
 
-`R5-lifecycle.md`: the maintenance rhythm on one page, the arc from week one to year one, and
+`reference/R5-lifecycle.md`: the maintenance rhythm on one page, the arc from week one to year one, and
 upgrade procedures for Ubuntu LTS end of life, the container image, Claude Code itself and the
 VPS. `DRIFT.1` detected a breaking CLI change in v4 and nothing told you what to do about it.
 
 ### A worked example
 
-`R6-worked-example.md`: one complete week with real artefacts, a review with dated evidence, an
+`reference/R6-worked-example.md`: one complete week with real artefacts, a review with dated evidence, an
 audit that names its own failure, a proposal through its whole life including the red-first test,
 and a quiet week that correctly changes nothing. Fictional and labelled as such. No previous
 version had one, and no amount of specification shows what "a bottleneck with evidence" reads

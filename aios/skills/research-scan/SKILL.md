@@ -9,8 +9,8 @@ Two modes, both weekly, both after the audit.
 
 **Everything fetched goes through the quarantine pipeline.** The fetcher runs under
 `conf/settings-fetch.json` with `WebFetch` and nothing else. The summariser has no network and
-no Bash. A model release note is still a page on the internet, and `01-architecture.md` section
-5 is the reason that sentence is not paranoia.
+no Bash. A model release note is still a page on the internet, and section 5 of
+`core/01-architecture.md` is the reason that sentence is not paranoia.
 
 ## Targeted
 

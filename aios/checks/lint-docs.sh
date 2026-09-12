@@ -23,6 +23,11 @@ KNOWN={os.path.basename(f) for f in docs}
 # Files the BUILT SYSTEM creates, which legitimately do not exist in this set.
 KNOWN |= {'CLAUDE.md','START-HERE.md','RESTORE.md','SKILL.md',
           'ASSUMPTIONS.md','HANDOVER.md','SUBSTITUTIONS.md','blocked.md'}
+# A document that lives in core/ or reference/ must be CITED with its directory.
+# The bare name resolves as a basename, so this is the one case the check above
+# cannot see, and a stale citation survived into this version exactly that way.
+QUALIFY={os.path.basename(f): f[2:] for f in docs
+         if f.startswith('./core/') or f.startswith('./reference/')}
 bad=0
 for d in sorted(docs):
     t=open(d).read()
@@ -34,6 +39,13 @@ for d in sorted(docs):
     if unres: print(f"REFERENCE DOES NOT RESOLVE    {d}: {' '.join(unres)}"); bad+=1
     stale=sorted(m for m in set(bare_re.findall(t)) if m not in KNOWN)
     if stale: print(f"BARE NAME DOES NOT RESOLVE    {d}: {' '.join(stale)}"); bad+=1
+    # Only CROSS-directory citations need the prefix. A sibling inside core/ or
+    # reference/ is unambiguous; a skill pointing at a core document is not, and
+    # that is the case that went stale.
+    here=os.path.dirname(d[2:])
+    unq=sorted(f"{m} (write {QUALIFY[m]})" for m in set(bare_re.findall(t))
+               if m in QUALIFY and os.path.dirname(QUALIFY[m]) != here)
+    if unq: print(f"CROSS-DIR CITATION NEEDS PATH {d}: {'; '.join(unq)}"); bad+=1
 print(f"{len(docs)} documents, {len(ids)} manifest IDs, {bad} problem(s)")
 sys.exit(1 if bad else 0)
 PY
