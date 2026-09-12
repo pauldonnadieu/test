@@ -12,8 +12,9 @@ Every place the cold reader guesses, stalls, invents a path, or falls into a tra
 explicitly warn about is a **writing defect**. The output is a defect list, not a grade.
 
 **This version has not been read cold.** The previous one was, twice, and both runs found real
-defects. This version adds a stage, three documents, eight skills and roughly forty checks, so
-that result does not transfer. Run this before the real build, not after.
+defects. This version restructured the whole set into a spine plus seven reference documents,
+added three skills and a free-tier lane, and replaced a specification of the harness with a
+working one, so that result does not transfer. Run this before the real build, not after.
 
 ## What the session is given, and denied
 
@@ -49,7 +50,7 @@ than as initiative.
 | Container flags (cap-drop, no-new-privs, socket, limits) | none | **UNTESTABLE** |
 | OAuth persistence across a rebuild | none | **UNTESTABLE**. This is the likeliest real-world failure and the sandbox cannot see it |
 | Hetzner firewall, UFW, Tailscale | none | **UNTESTABLE**, all of stage 1 |
-| Hooks | **Genuine.** Hooks are CLI-level and run here | The behaviour checks `HK.4`-`HK.7` are real in this sandbox |
+| Hooks | **Genuine.** Hooks are CLI-level and run here | The behaviour checks `HK.4`-`HK.9` are real in this sandbox |
 | restic to Google Drive | restic to a local directory repo | Encryption, retention, coverage and the restore drill genuine; Drive throttling not |
 | cron | scripts invoked directly, once | Script correctness genuine; scheduling not. The halt check is genuine |
 | Security observations | Genuine against fixtures, not against a real week | Partial |
@@ -64,12 +65,21 @@ be proven in a sandbox; the container flags underneath it still cannot.
 
 ## Running it
 
-```bash
-sudo ./run-e2e.sh --dry-run     # shows everything, spawns nothing, costs nothing
-sudo ./run-e2e.sh --runs 2      # the real thing
-```
+**`run-e2e.sh` is not shipped and has to be written.** It is thirty lines of orchestration and
+it is deliberately not in the set, because it belongs to whoever is running the test rather than
+to the system under test. What it must do:
+
+1. Create a disposable machine or container, a real unix user `aios`, and `/srv/aios`.
+2. Copy in `aios/` and `brief.md`, and nothing else.
+3. Spawn a cold `claude -p` session with `--permission-prompts none` and the brief, twice.
+4. Capture the artefacts listed below into `test/results/<timestamp>-run<n>/`.
+5. Detect a usage-limit error in the transcript and write `STARVED.txt` if it finds one.
+6. Run `checks/score-e2e.sh` against each built tree.
 
 Root is required: it creates the `aios` user and writes `/srv/aios`. Both are disposable.
+
+The `aios` user matters more than it looks: `score-e2e.sh` reports its most important trap as a
+SKIP without one, because the agent-uid write test has to become that user to mean anything.
 
 ### Two runs, not one
 

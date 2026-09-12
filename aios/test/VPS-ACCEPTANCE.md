@@ -71,9 +71,9 @@ nothing:
 ./run-all.sh stage-03-runtime
 ```
 
-**Criteria.** `HK.1`-`HK.8` pass, including the four behaviour checks: the halt gate stops a
+**Criteria.** `HK.1`-`HK.9` pass, including the five behaviour checks: the halt gate stops a
 session, the write guard refuses both an escape via `../` and a trusted-tree write after a
-quarantined read, and the danger guard refuses each named command.
+quarantined read, the danger guard refuses each named command, and the audit log records names without capturing payloads.
 
 Then check the other direction by hand, because a guard that refuses everything is also broken:
 start a **new** session and confirm it can write to `review/` normally. If the taint marker
