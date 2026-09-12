@@ -1,7 +1,7 @@
 You are building a personal AI operating system on this machine.
 
 The complete specification is in `./aios/`. Start with `aios/README.md`, which names the
-reading order, then work through `aios/02-build.md` stage by stage.
+reading order, then work through `aios/core/02-build.md` stage by stage.
 
 Build it. Work through as many stages as you can.
 
@@ -30,10 +30,14 @@ Rules for this run:
    Do not fake anything you cannot do. A stage honestly skipped is worth more than a stage
    pretended.
 
-4. **Verify as you go.** `aios/checks/run-all.sh` is the scoring harness. Configure it
-   (`aios/checks/config.env.example` is the template) and run it. A stage is done when its
-   check passes. Checks specified in `aios/checks/NEW-CHECKS.md` do not exist yet; write them,
-   and prove each one by breaking the thing it tests before trusting it to pass.
+4. **Verify as you go.** `aios/checks/run-all.sh` is the scoring harness and it already
+   exists. Run `./run-all.sh --self-test` FIRST, which proves the runner scores correctly
+   before you trust any number it prints. Then copy `config.env.example` to `config.env`, fill
+   it in, and run the suite. A stage is done when its check passes.
+
+   You are not being asked to write the harness. If you find yourself needing to, say so in
+   `ASSUMPTIONS.md`: either a check is missing or a document sent you the wrong way, and both
+   are findings.
 
 5. When you stop, write `HANDOVER.md`: which stages are done, which are not, what is blocked on
    a human, and what you would do next.

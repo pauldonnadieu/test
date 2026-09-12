@@ -101,6 +101,12 @@ A scorer that has only ever been seen to pass proves nothing. Before first use, 
 - A **negative control**: the same tree with sabotages planted, one per trap. Expect FAIL, each
   named individually.
 
-Re-run both controls after any change to `score-e2e.sh`. The previous version's scorer was
-validated this way against six sabotages; this version adds six more traps and the controls
-have not been rebuilt. Until they are, the scorer is unproven on the new half.
+Both controls have been run against this version. The positive control passes fourteen checks
+with one honest SKIP (the agent-uid write test needs an `aios` user, which the authoring sandbox
+did not have, and a check that cannot run is not a pass). The negative control plants one
+sabotage per trap and each is named individually.
+
+**Re-run both after any change to `score-e2e.sh`.** Writing this scorer found a bug in the
+scorer itself: a trap was matching a word inside a comment rather than the actual backup path,
+so a sabotaged file still passed. A scorer nobody has tried to fool is a scorer that has not
+been tested.
