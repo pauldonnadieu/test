@@ -10,7 +10,7 @@ truthfully attest to something.
 **How to use this with Claude Code.** Hand it the whole `aios/` folder and tell it to build.
 When it reaches a stage that depends on an item below, it should say which item, what it needs
 from you, and wait. If you are not there, it records the block and moves to the next stage that
-is not blocked, per the unattended rules in `02-build.md`.
+is not blocked, per the unattended rules in `core/02-build.md`.
 
 ---
 
@@ -40,7 +40,7 @@ attestation is worse than a missing one because a missing one is visible.
 | # | What | Why it matters this much |
 |---|---|---|
 | H7 | **Turn OFF "use my data to improve Claude"** at claude.ai/settings/data-privacy-controls | With it on, consumer transcript retention is 5 years. With it off, 30 days. Highest-leverage single setting in the build |
-| H8 | Put a unique strong password and a **hardware-backed second factor** on the Anthropic account | This account is a path to the container and the data mount. See `01-architecture.md` section 6 |
+| H8 | Put a unique strong password and a **hardware-backed second factor** on the Anthropic account | This account is a path to the container and the data mount. See `core/01-architecture.md` section 6 |
 | H9 | Second factor on the Google account holding the backup | It holds ciphertext, but an attacker who can delete it can still destroy your history |
 | H10 | Second factor on the **Hetzner** account | It can destroy the machine and read the console |
 | H11 | Generate the restic password, store it in the password manager **and** as an offline copy that survives the password manager | Lose both and every snapshot is permanently unreadable. This is the design working, not failing |
@@ -113,7 +113,7 @@ another twenty minutes now rather than six months of shallow reviews.
 
 ---
 
-## Stage 10, handover (about 30 minutes)
+## Stage 11, handover (about 30 minutes)
 
 | # | What | Why |
 |---|---|---|
@@ -121,11 +121,11 @@ another twenty minutes now rather than six months of shallow reviews.
 | H22 | Complete one real check-in from the phone, end to end | Proves the actual daily path, not a simulation of it |
 | H23 | Ask it one real question from the phone | Proves the interactive path |
 | H24 | Walk the break-glass path yourself: Tailscale SSH from a laptop, `docker restart`, read `ops/runs/*.jsonl` | So the first time you do it is not the first time you need it |
-| H25 | Read the four kill-switch layers in `06-recovery-and-incidents.md` and put them somewhere reachable from your phone **without the AIOS** | A kill switch you can only reach through the thing you are trying to kill is not a kill switch |
+| H25 | Use kill-switch layers 1 and 3 once each, deliberately, and watch a routine stop | You wrote them down at H11b. This is the rehearsal, and `reference/R3-recovery.md` section 1 is the reference |
 
 ---
 
-## Stage 11, the acceptance test (about 2 hours, about 1 AUD)
+## Stage 12, the acceptance test (about 2 hours, about 1 AUD)
 
 | # | What | Why |
 |---|---|---|
@@ -167,7 +167,7 @@ anything, you tested copying, not recovery.
 | Recovery drill, per run | a few cents of second VPS, four times a year |
 | **Running total** | **about 45 AUD/month** |
 
-Everything in `05-after-v1.md` is outside this. The Apple Developer Program, at 99 USD a year,
+Everything in `reference/R7-after-v1.md` is outside this. The Apple Developer Program, at 99 USD a year,
 is roughly a third of the annual running cost of the entire system, which is why the phone app
 is a real decision and not a footnote.
 

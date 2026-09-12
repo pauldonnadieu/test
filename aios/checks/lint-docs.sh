@@ -16,6 +16,13 @@ docs=[os.path.join(dp,fn) for dp,_,fns in os.walk('.') for fn in fns
       if fn.endswith('.md') and '/fixtures' not in dp and '/.git' not in dp]
 id_re=re.compile(r'`([A-Z][A-Z0-9]{1,6}\.[0-9]{1,2})`')
 ref_re=re.compile(r'`((?:core|reference|test|checks|conf|bin|skills)/[A-Za-z0-9._/-]+)`')
+# Bare document names, e.g. `02-build.md`. These are the ones a path-prefixed
+# pattern misses, and four stale ones survived into an earlier version this way.
+bare_re=re.compile(r'`([0-9]{2}-[a-z-]+\.md|R[0-9]-[a-z-]+\.md|[A-Z-]+\.md)`')
+KNOWN={os.path.basename(f) for f in docs}
+# Files the BUILT SYSTEM creates, which legitimately do not exist in this set.
+KNOWN |= {'CLAUDE.md','START-HERE.md','RESTORE.md','SKILL.md',
+          'ASSUMPTIONS.md','HANDOVER.md','SUBSTITUTIONS.md','blocked.md'}
 bad=0
 for d in sorted(docs):
     t=open(d).read()
@@ -25,6 +32,8 @@ for d in sorted(docs):
                  if not m.startswith(DATA) and m!='checks/config.env'
                  and not os.path.exists(m.rstrip('/')))
     if unres: print(f"REFERENCE DOES NOT RESOLVE    {d}: {' '.join(unres)}"); bad+=1
+    stale=sorted(m for m in set(bare_re.findall(t)) if m not in KNOWN)
+    if stale: print(f"BARE NAME DOES NOT RESOLVE    {d}: {' '.join(stale)}"); bad+=1
 print(f"{len(docs)} documents, {len(ids)} manifest IDs, {bad} problem(s)")
 sys.exit(1 if bad else 0)
 PY
